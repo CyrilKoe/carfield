@@ -164,6 +164,7 @@ $(CAR_SW_DIR)/boot/linux_carfield_%.gpt.bin: $(CHS_SW_DIR)/boot/zsl.rom.bin $(CA
 ifneq ($(XILINX_BOOT_ETH),1)
 	dd if=$(word 4,$^) of=$@ bs=512 seek=8192 conv=notrunc
 else
+# If we plan in booting over ethernet do not add Linux
 	truncate -s 4M $@
 endif
 
@@ -171,7 +172,7 @@ endif
 # Linux app compilation #
 #########################
 
-CAR_CVA6_SDK      ?= $(realpath cva6-sdk)
+CAR_CVA6_SDK      ?= $(realpath sw/deps/cva6-sdk)
 CAR_CROSS_COMPILE := $(CAR_CVA6_SDK)/buildroot/output/host/bin/riscv64-buildroot-linux-gnu-
 CAR_APP_CC        := $(CAR_CROSS_COMPILE)gcc
 CAR_APP_OBJDUMP   := $(CAR_CROSS_COMPILE)objdump
