@@ -22,7 +22,7 @@ car-sw-all: car-sw-libs car-sw-tests
 # Libraries
 CAR_PULPD_BARE    ?= $(CAR_SW_DIR)/tests/bare-metal/pulpd
 CAR_SW_INCLUDES    = -I$(CAR_SW_DIR)/include -I$(CAR_SW_DIR)/tests/bare-metal/safed -I$(CAR_SW_DIR)/tests/bare-metal/spatzd -I$(CAR_PULPD_BARE) -I$(CHS_SW_DIR)/include $(CHS_SW_DEPS_INCS)
-CAR_SW_INCLUDES   += -I$(CAR_SW_DIR)/deps/riscv-iommu-tests/inc -I$(CAR_SW_DIR)/deps/riscv-iommu-tests/platform/cva6/inc
+CAR_SW_INCLUDES   += -I$(CAR_SW_DIR)/deps/riscv-iommu-tests/inc -I$(CAR_SW_DIR)/deps/riscv-iommu-tests/src/inc -I$(CAR_SW_DIR)/deps/riscv-iommu-tests/platform/cva6/inc
 CAR_SW_LIB_SRCS_S  = $(wildcard $(CAR_SW_DIR)/lib/*.S $(CAR_SW_DIR)/lib/**/*.S)
 CAR_SW_LIB_SRCS_C  = $(wildcard $(CAR_SW_DIR)/lib/*.c $(CAR_SW_DIR)/lib/**/*.c)
 CAR_SW_LIB_SRCS_O  = $(CAR_SW_DEPS_SRCS:.c=.o) $(CAR_SW_LIB_SRCS_S:.S=.o) $(CAR_SW_LIB_SRCS_C:.c=.o)
@@ -31,6 +31,9 @@ CAR_SW_LIBS = $(CAR_SW_DIR)/lib/libcarfield.a $(CAR_SW_DIR)/deps/riscv-iommu-tes
 
 $(CAR_SW_DIR)/lib/libcarfield.a: $(CAR_SW_LIB_SRCS_O)
 	$(CHS_SW_AR) $(CHS_SW_ARFLAGS) -rcsv $@ $^
+
+$(CAR_SW_DIR)/deps/riscv-iommu-tests/build/cva6/rv_iommu_test.a:
+	make -C $(CAR_SW_DIR)/deps/riscv-iommu-tests PLAT=cva6 MARCH=rv64imafdc_zicsr MABI=lp64d build/cva6/rv_iommu_test.a
 
 car-sw-libs: $(CAR_SW_LIBS)
 
@@ -90,7 +93,7 @@ define offload_tests_template
 		$(CHS_SW_CC) $(CAR_SW_INCLUDES) $(CHS_SW_CCFLAGS) -c $(3) -o $(4).$(basename $(notdir $(header))).car.o; \
 		$(CHS_SW_CC) $(CAR_SW_INCLUDES) -T$(CAR_LD_DIR)/l2.ld $(CAR_SW_LDFLAGS) -o $(4).$(basename $(notdir $(header))).car.l2.elf  $(4).$(basename $(notdir $(header))).car.o $(CHS_SW_LIBS) $(CAR_SW_LIBS); \
 		$(CHS_SW_OBJDUMP) -d -S $(4).$(basename $(notdir $(header))).car.l2.elf > $(4).$(basename $(notdir $(header))).car.l2.dump; \
-		$(CHS_SW_CC) $(CAR_SW_INCLUDES) -T$(CHS_LD_DIR)/dram.ld $(CAR_SW_LDFLAGS) -o $(4).$(basename $(notdir $(header))).car.dram.elf  $(4).$(basename $(notdir $(header))).car.o $(CHS_SW_LIBS) $(CAR_SW_LIBS); \
+		$(CHS_SW_CC) $(CAR_SW_INCLUDES) -T$(CHS_LD_DIR)/dram.ld $(CAR_SW_LDFLAGS) $(CAR_SW_OFFLOAD_$(2)_LDFLAGS) -o $(4).$(basename $(notdir $(header))).car.dram.elf  $(4).$(basename $(notdir $(header))).car.o $(CHS_SW_LIBS) $(CAR_SW_LIBS); \
 		$(CHS_SW_OBJDUMP) -d -S $(4).$(basename $(notdir $(header))).car.dram.elf > $(4).$(basename $(notdir $(header))).car.dram.dump; \
 		$(RM) $(CAR_SW_DIR)/tests/bare-metal/$(2)/payload.h; \
 		$(RM) $(4).$(basename $(notdir $(header))).car.o; \
@@ -111,10 +114,12 @@ car-pulpd-sw-offload-tests:
 	$(call offload_tests_template,$(PULPD_HEADER_TARGETS),pulpd,$(CAR_ELFLOAD_PULPD_INTF_SRC_C),$(CAR_ELFLOAD_PULPD_INTF_PATH))
 
 # Spatz offload tests
-#include $(CAR_SW_DIR)/tests/bare-metal/spatzd/sw.mk
+include $(CAR_SW_DIR)/tests/bare-metal/spatzd/sw.mk
 
-car-spatzd-sw-offload-tests:
+car-spatzd-sw-offload-tests: $(SPATZD_HEADER_TARGETS)
+	echo $(SPATZD_HEADER_TARGETS)
 	$(call offload_tests_template,$(SPATZD_HEADER_TARGETS),spatzd,$(CAR_ELFLOAD_BLOCKING_SPATZD_SRC_C),$(CAR_ELFLOAD_BLOCKING_SPATZD_PATH))
+.PHONY: car-spatzd-sw-offload-tests
 
 # Litmus tests
 LITMUS_REPO := https://github.com/pulp-platform/CHERI-Litmus.git
