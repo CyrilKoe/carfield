@@ -21,7 +21,7 @@ car-sw-all: car-sw-libs car-sw-tests
 
 # Libraries
 CAR_PULPD_BARE    ?= $(CAR_SW_DIR)/tests/bare-metal/pulpd
-CAR_SW_INCLUDES    = -I$(CAR_SW_DIR)/include -I$(CAR_SW_DIR)/tests/bare-metal/safed -I$(CAR_PULPD_BARE) -I$(CHS_SW_DIR)/include $(CHS_SW_DEPS_INCS)
+CAR_SW_INCLUDES    = -I$(CAR_SW_DIR)/include -I$(CAR_SW_DIR)/tests/bare-metal/safed -I$(CAR_SW_DIR)/tests/bare-metal/spatzd -I$(CAR_PULPD_BARE) -I$(CHS_SW_DIR)/include $(CHS_SW_DEPS_INCS)
 CAR_SW_LIB_SRCS_S  = $(wildcard $(CAR_SW_DIR)/lib/*.S $(CAR_SW_DIR)/lib/**/*.S)
 CAR_SW_LIB_SRCS_C  = $(wildcard $(CAR_SW_DIR)/lib/*.c $(CAR_SW_DIR)/lib/**/*.c)
 CAR_SW_LIB_SRCS_O  = $(CAR_SW_DEPS_SRCS:.c=.o) $(CAR_SW_LIB_SRCS_S:.S=.o) $(CAR_SW_LIB_SRCS_C:.c=.o)
@@ -62,6 +62,9 @@ CAR_ELFLOAD_BLOCKING_PULPD_SRC_C := $(CAR_SW_DIR)/tests/bare-metal/hostd/pulpd_o
 CAR_ELFLOAD_BLOCKING_PULPD_PATH := $(basename $(CAR_ELFLOAD_BLOCKING_PULPD_SRC_C))
 CAR_ELFLOAD_PULPD_INTF_SRC_C := $(CAR_SW_DIR)/tests/bare-metal/hostd/pulp-offload-intf.c
 CAR_ELFLOAD_PULPD_INTF_PATH := $(basename $(CAR_ELFLOAD_PULPD_INTF_SRC_C))
+CAR_ELFLOAD_BLOCKING_SPATZD_SRC_C := $(CAR_SW_DIR)/tests/bare-metal/hostd/spatzd_offloader_blocking.c
+CAR_ELFLOAD_BLOCKING_SPATZD_PATH := $(basename $(CAR_ELFLOAD_BLOCKING_SPATZD_SRC_C))
+
 
 CAR_SW_TEST_SRCS_S	= $(wildcard $(CAR_SW_DIR)/tests/bare-metal/hostd/*.S)
 CAR_SW_TEST_SRCS_C	= $(filter-out $(CAR_ELFLOAD_BLOCKING_SAFED_SRC_C) $(CAR_ELFLOAD_BLOCKING_PULPD_SRC_C) $(CAR_ELFLOAD_PULPD_INTF_SRC_C), $(wildcard $(CAR_SW_DIR)/tests/bare-metal/hostd/*.c))
@@ -106,6 +109,12 @@ include $(CAR_SW_DIR)/tests/bare-metal/pulpd/sw.mk
 car-pulpd-sw-offload-tests:
 	$(call offload_tests_template,$(PULPD_HEADER_TARGETS),pulpd,$(CAR_ELFLOAD_BLOCKING_PULPD_SRC_C),$(CAR_ELFLOAD_BLOCKING_PULPD_PATH))
 	$(call offload_tests_template,$(PULPD_HEADER_TARGETS),pulpd,$(CAR_ELFLOAD_PULPD_INTF_SRC_C),$(CAR_ELFLOAD_PULPD_INTF_PATH))
+
+# Spatz offload tests
+include $(CAR_SW_DIR)/tests/bare-metal/spatzd/sw.mk
+
+car-spatzd-sw-offload-tests:
+	$(call offload_tests_template,$(SPATZD_HEADER_TARGETS),spatzd,$(CAR_ELFLOAD_BLOCKING_SPATZD_SRC_C),$(CAR_ELFLOAD_BLOCKING_SPATZD_PATH))
 
 # Litmus tests
 LITMUS_REPO := https://github.com/pulp-platform/CHERI-Litmus.git

@@ -342,6 +342,58 @@ uint32_t safed_offloader_blocking () {
 	return ret;
 }
 
+// Spatz offload
+void prepare_spatzd_boot () {
+
+	// Write entry point into boot address
+	volatile uintptr_t bootaddr_addr = (uintptr_t)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x58);
+	writew(0x78000000, bootaddr_addr);
+
+	// Send IRQ
+	volatile uintptr_t mbox_addr = (uintptr_t)CAR_MBOX_BASE_ADDR;
+	writew(1, mbox_addr + 0x20c);
+    writew(1, mbox_addr + 0x204);
+    writew(1, mbox_addr + 0x30c);
+    writew(1, mbox_addr + 0x304);
+
+	volatile uintptr_t status_addr = (uintptr_t)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x50);
+	writew(1, status_addr);
+
+}
+
+uint32_t poll_spatzd_corestatus () {
+
+	volatile uintptr_t status_addr = (uintptr_t)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x50);
+	// TODO: Add a timeut to not poll indefinitely
+	while (((uint32_t)readw(status_addr)) == 1)
+	    ;
+
+	return 0;
+}
+
+uint32_t spatzd_offloader_blocking () {
+
+	uint32_t ret = 0;
+
+	// Load binary payload
+	load_binary();
+
+	fence();
+
+	// Select bootmode, write entry point, write launch signal
+	prepare_spatzd_boot();
+
+	// Poll status register
+	volatile uint32_t corestatus = poll_spatzd_corestatus();
+
+	// Check core status. Return safed exit code to signal an error in the execution.
+	if ((corestatus & 0x7FFFFFFF) != 0) {
+	    ret = ESAFEDEXEC;
+	}
+
+	return ret;
+}
+
 // PULP cluster setup and configuration
 
 void pulp_cluster_set_bootaddress(uint32_t pulp_boot_addr) {
