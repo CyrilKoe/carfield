@@ -8,7 +8,7 @@
 # Clock generators #
 ####################
 
-set SOC_TCK 20
+set SOC_TCK 40
 
 ## Generate a clock based on the default clk_sel value for a clock mux
 ## @param clk_sel_path path to the clk_sel register

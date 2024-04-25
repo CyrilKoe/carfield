@@ -124,7 +124,7 @@ module carfield_top_xilinx
   `endif
   logic sys_rst;
 
-  wire clk_100, clk_50, clk_20;
+  wire clk_100, clk_25, clk_20;
   (* dont_touch = "yes" *) wire clk_10;
   wire soc_clk, host_clk, alt_clk, periph_clk;
   (* dont_touch = "yes" *) wire rst_n;
@@ -177,12 +177,12 @@ module carfield_top_xilinx
     .clk_in1 ( sys_clk  ),
     .reset   ( '0       ),
     .clk_100 ( clk_100  ),
-    .clk_50  ( clk_50   ),
+    .clk_25  ( clk_25   ),
     .clk_20  ( clk_20   ),
     .clk_10  ( clk_10   )
   );
   localparam rtc_clk_divider = 4;
-  assign soc_clk = clk_50;
+  assign soc_clk = clk_25;
   assign alt_clk = clk_20;
   assign host_clk = soc_clk;
   assign periph_clk = soc_clk;

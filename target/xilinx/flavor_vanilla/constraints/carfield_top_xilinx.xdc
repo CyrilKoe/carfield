@@ -4,7 +4,7 @@
 #
 # Cyril Koenig <cykoenig@iis.ee.ethz.ch>
 
-set SOC_TCK 20
+set SOC_TCK 40
 set JTAG_TCK 100.0
 set UART_IO_SPEED 200.0
 

@@ -4,7 +4,7 @@
 #
 # Cyril Koenig <cykoenig@iis.ee.ethz.ch>
 
-set SOC_TCK 20
+set SOC_TCK 40
 
 ####################
 # Clock generators #
@@ -56,8 +56,8 @@ set_false_path -hold -to [get_pins -of_objects [get_cells -hier -filter {NAME =~
 ###################
 
 # Most of these paths go through proper synchronizers, but not all of them
-set_max_delay -datapath_only -through [get_cells i_carfield_reg_top] -from [get_clocks -filter {NAME !~ "*clk_50*"}] -to [get_clocks *clk_50*] $SOC_TCK
-set_max_delay -datapath_only -through [get_cells i_carfield_reg_top] -from [get_clocks *clk_50*] -to [get_clocks -filter {NAME !~ "*clk_50*"}] $SOC_TCK
+set_max_delay -datapath_only -through [get_cells i_carfield_reg_top] -from [get_clocks -filter {NAME !~ "*clk_25*"}] -to [get_clocks *clk_25*] $SOC_TCK
+set_max_delay -datapath_only -through [get_cells i_carfield_reg_top] -from [get_clocks *clk_25*] -to [get_clocks -filter {NAME !~ "*clk_25*"}] $SOC_TCK
 
 #################
 # Carfield CDCs #

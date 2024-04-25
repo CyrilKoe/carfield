@@ -22,7 +22,7 @@ module carfield_xilinx
 
   input  logic         clk_10,
   input  logic         clk_20,
-  input  logic         clk_50,
+  input  logic         clk_25,
   input  logic         clk_100,
 
   input  logic         testmode_i,
@@ -219,7 +219,7 @@ module carfield_xilinx
   //////////////////
 
   localparam rtc_clk_divider = 4;
-  assign soc_clk = clk_50;
+  assign soc_clk = clk_25;
   assign alt_clk = clk_20;
   assign host_clk = soc_clk;
   assign periph_clk = soc_clk;

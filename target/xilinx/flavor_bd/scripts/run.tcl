@@ -97,7 +97,7 @@ if ($DEBUG) {
    C_EN_STRG_QUAL true C_INPUT_PIPE_STAGES 0 C_TRIGIN_EN false C_TRIGOUT_EN false" [get_debug_cores u_ila_0]
   ## Clock
   set_property port_width 1 [get_debug_ports u_ila_0/clk]
-  connect_debug_port u_ila_0/clk [get_nets design_1_i/clk_wiz_0_clk_50]
+  connect_debug_port u_ila_0/clk [get_nets design_1_i/clk_wiz_0_clk_25]
   # Get nets to debug
   set debugNets [lsort -dictionary [get_nets -hier -filter {MARK_DEBUG == 1}]]
   set netNameLast ""

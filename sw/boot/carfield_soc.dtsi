@@ -20,7 +20,7 @@
       device_type = "cpu";
       status = "okay";
       compatible = "eth,ariane", "riscv";
-      clock-frequency = <50000000>; // 50 MHz
+      clock-frequency = <25000000>; // 25 MHz
       riscv,isa = "rv64imafdc";
       mmu-type = "riscv,sv39";
       tlb-split;
@@ -34,10 +34,10 @@
     };
   };
 
-  sysclk: virt_50mhz {
+  sysclk: virt_25mhz {
     #clock-cells = <0>;
     compatible = "fixed-clock";
-    clock-frequency = <50000000>;
+    clock-frequency = <25000000>;
   };
 
   soc: soc {
@@ -68,7 +68,7 @@
     };
     serial@3002000 {
       compatible = "ns16550a";
-      clock-frequency = <50000000>; // 50 MHz
+      clock-frequency = <25000000>; // 25 MHz
       current-speed = <38400>;
       interrupt-parent = <&PLIC0>;
       interrupts = <1>;
@@ -81,7 +81,7 @@
       interrupt-parent = <&PLIC0>;
       interrupts = <17 18>;
       reg = <0x0 0x3004000 0x0 0x1000>;
-      clock-frequency = <50000000>;
+      clock-frequency = <25000000>;
       max-frequency = <20000000>;
       #address-cells = <1>;
       #size-cells = <0>;

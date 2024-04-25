@@ -16,8 +16,8 @@ module carfield_xilinx_ip
   input  wire         clk_10             ,
 (* X_INTERFACE_INFO = "xilinx.com:signal:clock_rtl:1.0 clock clk_20" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 20000000" *)
   input  wire         clk_20             ,
-(* X_INTERFACE_INFO = "xilinx.com:signal:clock_rtl:1.0 clock clk_50" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 50000000, ASSOCIATED_BUSIF periph_axi_s" *)
-  input  wire         clk_50             ,
+(* X_INTERFACE_INFO = "xilinx.com:signal:clock_rtl:1.0 clock clk_25" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 25000000, ASSOCIATED_BUSIF periph_axi_s" *)
+  input  wire         clk_25             ,
 (* X_INTERFACE_INFO = "xilinx.com:signal:clock_rtl:1.0 clock clk_100" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 100000000" *)
   input  wire         clk_100            ,
 
@@ -49,7 +49,7 @@ module carfield_xilinx_ip
 
   // MASTER AXI DRAM
 
-(* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 dram_axi ARADDR" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 50000000" *)
+(* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 dram_axi ARADDR" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 25000000" *)
   output wire [47:0] dram_axi_m_axi_araddr,
 (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 dram_axi ARBURST" *)
   output wire [1:0] dram_axi_m_axi_arburst,
@@ -123,14 +123,14 @@ module carfield_xilinx_ip
   output wire [7:0] dram_axi_m_axi_wstrb,
 (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 dram_axi WVALID" *)
   output wire dram_axi_m_axi_wvalid,
-(* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 dram_axi CLK" *) (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME dram_axi, ASSOCIATED_BUSIF dram_axi, FREQ_HZ 50000000" *)
+(* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 dram_axi CLK" *) (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME dram_axi, ASSOCIATED_BUSIF dram_axi, FREQ_HZ 25000000" *)
   output wire dram_axi_m_aclk,
 (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 aux_reset RST" *) (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME aux_reset, POLARITY ACTIVE_LOW" *)
   output wire dram_axi_m_aresetn,
 
 // MASTER AXI PERIPHERAL
 
-(* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 periph_axi_m ARADDR" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 50000000" *)
+(* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 periph_axi_m ARADDR" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 25000000" *)
   output wire [47:0] periph_axi_m_axi_araddr,
 (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 periph_axi_m ARBURST" *)
   output wire [1:0] periph_axi_m_axi_arburst,
@@ -204,14 +204,14 @@ module carfield_xilinx_ip
   output wire [7:0] periph_axi_m_axi_wstrb,
 (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 periph_axi_m WVALID" *)
   output wire periph_axi_m_axi_wvalid,
-(* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 periph_axi_m CLK" *) (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME periph_axi_m, ASSOCIATED_BUSIF periph_axi_m, FREQ_HZ 500000000" *)
+(* X_INTERFACE_INFO = "xilinx.com:signal:clock:1.0 periph_axi_m CLK" *) (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME periph_axi_m, ASSOCIATED_BUSIF periph_axi_m, FREQ_HZ 250000000" *)
   output wire periph_axi_m_aclk,
 (* X_INTERFACE_INFO = "xilinx.com:signal:reset:1.0 periph_axi_m RST" *) (* X_INTERFACE_PARAMETER = "XIL_INTERFACENAME periph_axi_m, POLARITY ACTIVE_LOW" *)
   output wire periph_axi_m_aresetn,
 
 // SLAVE AXI PERIPHERAL
 
-(* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 periph_axi_s ARADDR" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 50000000" *)
+(* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 periph_axi_s ARADDR" *) (* X_INTERFACE_PARAMETER = "FREQ_HZ 25000000" *)
   input wire [47:0] periph_axi_s_axi_araddr,
 (* X_INTERFACE_INFO = "xilinx.com:interface:aximm:1.0 periph_axi_s ARBURST" *)
   input wire [1:0] periph_axi_s_axi_arburst,
@@ -295,7 +295,7 @@ module carfield_xilinx_ip
     .cpu_reset(cpu_reset),
     .clk_10(clk_10),
     .clk_20(clk_20),
-    .clk_50(clk_50),
+    .clk_25(clk_25),
     .clk_100(clk_100),
 
     .testmode_i        (testmode_i        ) ,

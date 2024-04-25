@@ -287,9 +287,9 @@ proc create_root_design { parentCell } {
    CONFIG.CLKOUT2_PHASE_ERROR {87.180} \
    CONFIG.CLKOUT2_REQUESTED_OUT_FREQ {20.000} \
    CONFIG.CLKOUT2_USED {true} \
-   CONFIG.CLKOUT3_JITTER {132.683} \
+   CONFIG.CLKOUT3_JITTER {154.057} \
    CONFIG.CLKOUT3_PHASE_ERROR {87.180} \
-   CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {50.000} \
+   CONFIG.CLKOUT3_REQUESTED_OUT_FREQ {25.000} \
    CONFIG.CLKOUT3_USED {true} \
    CONFIG.CLKOUT4_JITTER {115.831} \
    CONFIG.CLKOUT4_PHASE_ERROR {87.180} \
@@ -297,12 +297,12 @@ proc create_root_design { parentCell } {
    CONFIG.CLK_IN1_BOARD_INTERFACE {Custom} \
    CONFIG.CLK_OUT1_PORT {clk_10} \
    CONFIG.CLK_OUT2_PORT {clk_20} \
-   CONFIG.CLK_OUT3_PORT {clk_50} \
+   CONFIG.CLK_OUT3_PORT {clk_25} \
    CONFIG.CLK_OUT4_PORT {clk_100} \
    CONFIG.ENABLE_CLOCK_MONITOR {false} \
    CONFIG.MMCM_CLKOUT0_DIVIDE_F {120.000} \
    CONFIG.MMCM_CLKOUT1_DIVIDE {60} \
-   CONFIG.MMCM_CLKOUT2_DIVIDE {24} \
+   CONFIG.MMCM_CLKOUT2_DIVIDE {48} \
    CONFIG.MMCM_CLKOUT3_DIVIDE {12} \
    CONFIG.NUM_OUT_CLKS {4} \
    CONFIG.PRIMITIVE {MMCM} \
@@ -481,7 +481,7 @@ proc create_root_design { parentCell } {
   connect_bd_net -net carfield_xilinx_ip_0_uart_tx_o [get_bd_ports uart_tx_o] [get_bd_pins carfield_xilinx_ip_0/uart_tx_o]
   connect_bd_net -net clk_wiz_0_clk_10 [get_bd_pins carfield_xilinx_ip_0/clk_10] [get_bd_pins clk_wiz_0/clk_10] [get_bd_pins psr_10/slowest_sync_clk]
   connect_bd_net -net clk_wiz_0_clk_20 [get_bd_pins carfield_xilinx_ip_0/clk_20] [get_bd_pins clk_wiz_0/clk_20]
-  connect_bd_net -net clk_wiz_0_clk_50 [get_bd_pins axi_dma_0/m_axi_mm2s_aclk] [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] [get_bd_pins axi_dma_0/m_axi_sg_aclk] [get_bd_pins axi_dma_0/s_axi_lite_aclk] [get_bd_pins axi_ethernet_0/axis_clk] [get_bd_pins axi_ethernet_0/s_axi_lite_clk] [get_bd_pins carfield_xilinx_ip_0/clk_50] [get_bd_pins clk_wiz_0/clk_50] [get_bd_pins vio_0/clk] [get_bd_pins xbar_periph_in/aclk] [get_bd_pins xbar_periph_out/aclk1]
+  connect_bd_net -net clk_wiz_0_clk_25 [get_bd_pins axi_dma_0/m_axi_mm2s_aclk] [get_bd_pins axi_dma_0/m_axi_s2mm_aclk] [get_bd_pins axi_dma_0/m_axi_sg_aclk] [get_bd_pins axi_dma_0/s_axi_lite_aclk] [get_bd_pins axi_ethernet_0/axis_clk] [get_bd_pins axi_ethernet_0/s_axi_lite_clk] [get_bd_pins carfield_xilinx_ip_0/clk_25] [get_bd_pins clk_wiz_0/clk_25] [get_bd_pins vio_0/clk] [get_bd_pins xbar_periph_in/aclk] [get_bd_pins xbar_periph_out/aclk1]
   connect_bd_net -net clk_wiz_0_clk_100 [get_bd_pins carfield_xilinx_ip_0/clk_100] [get_bd_pins clk_wiz_0/clk_100]
   connect_bd_net -net clk_wiz_0_locked [get_bd_pins clk_wiz_0/locked] [get_bd_pins psr_10/dcm_locked]
   connect_bd_net -net concat_irq_dout [get_bd_pins carfield_xilinx_ip_0/gpio_i] [get_bd_pins concat_irq/dout]
