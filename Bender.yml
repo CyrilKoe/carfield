@@ -28,7 +28,7 @@ dependencies:
   common_cells:       { git: https://github.com/pulp-platform/common_cells.git,         version: 1.31.1                               }
   pulp-ethernet:      { git: https://github.com/pulp-platform/pulp-ethernet.git,        rev: bdc8031ab270a49da28df269266ce9ab9a133636 } # branch: carfield
   riscv-dbg:          { git: https://github.com/pulp-platform/riscv-dbg.git,            version: =0.8.0                               }
-  riscv-iommu:        { git: https://github.com/zero-day-labs/riscv-iommu.git,          rev: 26ae5a84468d3bf8c888340b12fe592b112c706d } # branch: pulp
+  riscv-iommu:        { git: https://github.com/cyrilkoe/riscv-iommu.git,               rev: ef9e56fe6b93e29374cb9df58253d7b761a030f1 } # branch: ck/pulp
 
 workspace:
   package_links:

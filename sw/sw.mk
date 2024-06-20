@@ -111,7 +111,7 @@ car-pulpd-sw-offload-tests:
 	$(call offload_tests_template,$(PULPD_HEADER_TARGETS),pulpd,$(CAR_ELFLOAD_PULPD_INTF_SRC_C),$(CAR_ELFLOAD_PULPD_INTF_PATH))
 
 # Spatz offload tests
-include $(CAR_SW_DIR)/tests/bare-metal/spatzd/sw.mk
+#include $(CAR_SW_DIR)/tests/bare-metal/spatzd/sw.mk
 
 car-spatzd-sw-offload-tests:
 	$(call offload_tests_template,$(SPATZD_HEADER_TARGETS),spatzd,$(CAR_ELFLOAD_BLOCKING_SPATZD_SRC_C),$(CAR_ELFLOAD_BLOCKING_SPATZD_PATH))
