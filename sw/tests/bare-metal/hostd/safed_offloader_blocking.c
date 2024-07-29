@@ -17,6 +17,7 @@
 #include "util.h"
 #include "payload.h"
 #include "car_util.h"
+#include "printf.h"
 
 extern int load_safed_payload ();
 
@@ -25,10 +26,17 @@ int main(void)
 	// Init the HW
 	// Safety Island
 	car_enable_domain(CAR_SAFETY_RST);
+	car_reset_domain(CAR_SAFETY_RST);
 
 	// Here we assume that the offloader has to poll a status register to catch the end of
 	// computation of the Safety Island. Therefore, the offloading is blocking.
+	printf("Hi on the host\n\r");
+
 	uint32_t ret = safed_offloader_blocking();
+
+	printf("Bye on the host\n\r");
+
+	while(1) {}
 
 	return ret;
 }
