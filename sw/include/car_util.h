@@ -396,6 +396,18 @@ void prepare_spatzd_boot () {
 
 }
 
+// Snitch offload
+void prepare_snitchd_boot () {
+
+	// Write entry point into boot address
+	volatile uintptr_t bootaddr_addr = (uintptr_t)(CAR_FP_CLUSTER_SPM_BASE_ADDR(car_spatz_cluster) + 0x0);
+	writew(0x78000000, bootaddr_addr);
+
+	// Send IRQ
+	volatile uintptr_t cluster_clint_addr = (uintptr_t)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x180);
+	writew(0x1ff, cluster_clint_addr);
+}
+
 uint32_t poll_spatzd_corestatus () {
 
 	volatile uintptr_t status_addr = (uintptr_t)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x50);
@@ -416,7 +428,7 @@ uint32_t spatzd_offloader_blocking () {
 	fence();
 
 	// Select bootmode, write entry point, write launch signal
-	prepare_spatzd_boot();
+	prepare_snitchd_boot();
 
 	// Poll status register
 	volatile uint32_t corestatus = poll_spatzd_corestatus();

@@ -24,7 +24,7 @@ dependencies:
   timer_unit:         { git: https://github.com/pulp-platform/timer_unit.git,           version: 1.0.2                                }
   apb_adv_timer:      { git: https://github.com/pulp-platform/apb_adv_timer.git,        version: 1.0.4                                }
   can_bus:            { git: git@github.com:AlSaqr-platform/can_bus.git,                rev: 0ec0bf8b7dab6d5e4b3f7ec58338a8efee066379 } # branch: pulp
-  spatz:              { git: https://github.com/pulp-platform/spatz.git,                rev: 22ed8c852ebdab2a5ece51b429199fe064a4b0eb } # branch: ck/omptarget
+  #spatz:              { git: https://github.com/pulp-platform/spatz.git,                rev: 22ed8c852ebdab2a5ece51b429199fe064a4b0eb } # branch: ck/omptarget
   snitch_cluster:     { git: https://github.com/pulp-platform/snitch_cluster.git,       rev: 269830af872fa943d8b079470120d42d62e1cb69 }
   common_cells:       { git: https://github.com/pulp-platform/common_cells.git,         version: 1.31.1                               }
   pulp-ethernet:      { git: https://github.com/pulp-platform/pulp-ethernet.git,        rev: bdc8031ab270a49da28df269266ce9ab9a133636 } # branch: carfield
@@ -34,7 +34,6 @@ dependencies:
 workspace:
   package_links:
     cheshire: cheshire
-    spatz: spatz
     safety_island: safety_island
     opentitan: opentitan
     pulp_cluster: pulp_cluster
@@ -92,7 +91,9 @@ sources:
   - hw/hyperbus_wrap.sv
   - hw/l2_wrap.sv
   - hw/snitch_cluster_wrapper.sv
-  - hw/spatz_cluster_wrapper.sv
+  - hw/snitch_cluster_bootrom.sv
+  - hw/snitch_cluster_carfield.sv
+  #- hw/spatz_cluster_wrapper.sv
   - hw/carfield_rstgen.sv
   # Level 2
   - hw/carfield.sv
