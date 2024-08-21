@@ -92,6 +92,8 @@ sources:
   - hw/l2_wrap.sv
   - hw/stream_fifo_delay.sv
   - hw/axi_fifo_delay.sv
+  - hw/stream_fifo_delay_dyn.sv
+  - hw/axi_fifo_delay_dyn.sv
   - hw/snitch_cluster_wrapper.sv
   - hw/snitch_cluster_bootrom.sv
   - hw/snitch_cluster_carfield.sv
