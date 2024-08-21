@@ -422,6 +422,9 @@ uint32_t spatzd_offloader_blocking () {
 
 	uint32_t ret = 0;
 
+	volatile uintptr_t bootaddr_addr = (uintptr_t)(CAR_FP_CLUSTER_SPM_BASE_ADDR(car_spatz_cluster) + 0x0);
+	writew(0x78000000, bootaddr_addr);
+
 	// Load binary payload
 	load_binary();
 

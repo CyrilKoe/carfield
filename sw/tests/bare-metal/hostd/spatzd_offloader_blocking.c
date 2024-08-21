@@ -22,15 +22,13 @@
 /*
 #define BIT_MASK(pos, len) ((1<<(len))-1 << (pos))
 #include "rv_iommu.h"
-#include "page_tables.h"
 
-extern int load_spatzd_payload ();
+#include "page_tables.h"
 
 #define PAGE_SIZE           0x1000ULL     // 4kiB
 extern ddt_t root_ddt[DDT_N_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 extern pte_t s1pt[6][PAGE_SIZE/sizeof(pte_t)] __attribute__((aligned(PAGE_SIZE)));
-*/ 
-#if 0
+
 //typedef uint64_t pte_t;
 //pte_t s1pt[6][PAGE_SIZE/sizeof(pte_t)] __attribute__((aligned(PAGE_SIZE)));
 #define PT_SIZE (PAGE_SIZE)
@@ -68,10 +66,7 @@ extern pte_t s1pt[6][PAGE_SIZE/sizeof(pte_t)] __attribute__((aligned(PAGE_SIZE))
 #define PTE_RWX     (PTE_READ | PTE_WRITE | PTE_EXECUTE)
 
 #define PTE_PPN_MSK (0x3FFFFFFFFFFC00ULL)
-#endif
 
-
-/*
 void s1pt_map(uint64_t p_addr, uint64_t iov_addr, uint64_t size) {
 	uint64_t n_pages = size >> 10;
 	for(uint64_t i = 0; i < n_pages; i++) {
@@ -112,7 +107,11 @@ int main(void)
 	//root_ddt[0].fsc = (((uintptr_t)&(s1pt[0][0])) >> 12) | (IOSATP_MODE_SV39);
 
 	// Start IOMMU
+	//set_iommu_bare();
 	//set_iommu_1lvl();
+
+	// Set IOMMU to bare
+	writew(0x1, car_iommu + 0x10);
 
 	// Ungate the cluster
 	car_enable_domain(CAR_SPATZ_RST);
@@ -120,6 +119,8 @@ int main(void)
 	// Here we assume that the offloader has to poll a status register to catch the end of
 	// computation of the Safety Island. Therefore, the offloading is blocking.
 	uint32_t ret = spatzd_offloader_blocking();
+
+	while(1) {}
 
 	return ret;
 }
