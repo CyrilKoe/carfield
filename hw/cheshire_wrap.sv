@@ -566,18 +566,18 @@ riscv_iommu #(
   .axi_resp_t   (cheshire_axi_ext_llc_rsp_t),
   .DepthAR      (0    ), // Power of two
   .DepthAW      (0    ), // Power of two
-  .DepthR       (1024 ), // Power of two
+  .DepthR       (2048 ), // Power of two
   .DepthW       (0    ), // Power of two
-  .DepthB       (1024 ), // Power of two
-  .MaxDelay     (2**32)
+  .DepthB       (2048 ), // Power of two
+  .MaxDelay     (2**16-1)
 ) i_axi_fifo_delay (
   .clk_i,
   .rst_ni,
   .aw_delay_i (aw_delay_i),
-  .w_delay_i  (w_delay_i),
-  .b_delay_i  (b_delay_i),
+  .w_delay_i  (w_delay_i ),
+  .b_delay_i  (b_delay_i ),
   .ar_delay_i (ar_delay_i),
-  .r_delay_i  (r_delay_i),
+  .r_delay_i  (r_delay_i ),
   .slv_req_i  (axi_llc_mst_req),
   .slv_resp_o (axi_llc_mst_rsp),
   .mst_req_o  (axi_llc_delayed_mst_req),

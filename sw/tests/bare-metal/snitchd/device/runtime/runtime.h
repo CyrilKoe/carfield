@@ -3,19 +3,18 @@
 #include <stdint.h>
 #include <stddef.h>
 
-#if 0
-
 #define PULP_NOINLINE __attribute__ ((noinline))
 
-extern char l1_alloc_base;
-extern uint32_t atomic_barrier;
-extern uint32_t wake_up_reg;
-
-extern char l2_base;
-extern char l2_end;
+extern volatile char l1_alloc_base;
 
 typedef uint32_t pulp_id_t;
 typedef uint32_t pulp_timer_t;
+
+extern volatile uint32_t barrier_reg;
+
+#define l1_alloc(size, l1_alloc_base_ptr) next_l1_alloc; next_l1_alloc += size;
+
+static inline void * const get_l1_alloc_base() { return &l1_alloc_base;}
 
 /// Obtain the number of cores in the current cluster.
 static inline pulp_id_t pulp_get_core_count() {
@@ -69,7 +68,6 @@ static inline void pulp_barrier() {
     // }
 
     // The following uses the hardware barrier.
-    extern uint32_t barrier_reg;
     uint32_t tmp;
     fpu_fence();
     asm volatile (
@@ -78,11 +76,11 @@ static inline void pulp_barrier() {
         : [tmp] "=r"(tmp)
         : [addr] "r"(&barrier_reg)
         : "memory");
+    asm volatile("csrr x0, 0x7C2" ::: "memory");
 }
 
 /// A cluster-local barrier *without* FPU fence
 static inline void pulp_barrier_nofpu() {
-    extern uint32_t barrier_reg;
     uint32_t tmp;
     asm volatile (
         "lw %[tmp], 0(%[addr]) \n"
@@ -92,10 +90,14 @@ static inline void pulp_barrier_nofpu() {
         : "memory");
 }
 
+
 /// The different SSR data movers.
 enum ssr_dm {
     SSR_DM0 = 0,
-    SSR_DM1 = 1
+    SSR_DM1 = 1,
+    SSR_DM2 = 2,
+    // To write to all SSRs, use index 31
+    SSR_DM_ALL = 31,
 };
 
 /// The different dimensions.
@@ -107,110 +109,130 @@ enum ssr_dim {
 };
 
 /// The SSR configuration registers.
-typedef union { uint32_t value __attribute__((aligned(8))); } ssr_reg32_t;
-typedef struct {
-    ssr_reg32_t status;
-    ssr_reg32_t repeat;
-    ssr_reg32_t bounds[4];
-    ssr_reg32_t stride[4];
-    ssr_reg32_t _reserved4[14];
-    ssr_reg32_t rptr[4];
-    ssr_reg32_t wptr[4];
-} ssr_cfg_t;
-// extern volatile ssr_cfg_t ssr_config_reg[2]; // linker-provided address
-static volatile ssr_cfg_t * const ssr_config_reg = (void*)0x204800;
-
-// Configure an SSR data mover for a 1D loop nest.
-static inline void pulp_ssr_loop_1d(
-    enum ssr_dm dm,
-    uint16_t b0,
-    uint16_t i0
-) {
-    --b0;
-    ssr_config_reg[dm].bounds[0].value = b0;
-    uint16_t a = 0;
-    ssr_config_reg[dm].stride[0].value = i0 - a; a += i0*b0;
-}
-
-// Configure an SSR data mover for a 2D loop nest.
-static inline void pulp_ssr_loop_2d(
-    enum ssr_dm dm,
-    uint16_t b0,
-    uint16_t b1,
-    uint16_t i0,
-    uint16_t i1
-) {
-    --b0; --b1;
-    ssr_config_reg[dm].bounds[0].value = b0;
-    ssr_config_reg[dm].bounds[1].value = b1;
-    uint16_t a = 0;
-    ssr_config_reg[dm].stride[0].value = i0 - a; a += i0*b0;
-    ssr_config_reg[dm].stride[1].value = i1 - a; a += i1*b1;
-}
-
-// Configure an SSR data mover for a 3D loop nest.
-static inline void pulp_ssr_loop_3d(
-    enum ssr_dm dm,
-    uint16_t b0,
-    uint16_t b1,
-    uint16_t b2,
-    uint16_t i0,
-    uint16_t i1,
-    uint16_t i2
-) {
-    --b0; --b1; --b2;
-    ssr_config_reg[dm].bounds[0].value = b0;
-    ssr_config_reg[dm].bounds[1].value = b1;
-    ssr_config_reg[dm].bounds[2].value = b2;
-    uint16_t a = 0;
-    ssr_config_reg[dm].stride[0].value = i0 - a; a += i0*b0;
-    ssr_config_reg[dm].stride[1].value = i1 - a; a += i1*b1;
-    ssr_config_reg[dm].stride[2].value = i2 - a; a += i2*b2;
-}
-
-// Configure an SSR data mover for a 4D loop nest.
-static inline void pulp_ssr_loop_4d(
-    enum ssr_dm dm,
-    uint16_t b0,
-    uint16_t b1,
-    uint16_t b2,
-    uint16_t b3,
-    uint16_t i0,
-    uint16_t i1,
-    uint16_t i2,
-    uint16_t i3
-) {
-    --b0; --b1; --b2; --b3;
-    ssr_config_reg[dm].bounds[0].value = b0;
-    ssr_config_reg[dm].bounds[1].value = b1;
-    ssr_config_reg[dm].bounds[2].value = b2;
-    ssr_config_reg[dm].bounds[3].value = b3;
-    uint16_t a = 0;
-    ssr_config_reg[dm].stride[0].value = i0 - a; a += i0*b0;
-    ssr_config_reg[dm].stride[1].value = i1 - a; a += i1*b1;
-    ssr_config_reg[dm].stride[2].value = i2 - a; a += i2*b2;
-    ssr_config_reg[dm].stride[3].value = i3 - a; a += i3*b3;
-}
+enum {
+    REG_STATUS = 0,
+    REG_REPEAT = 1,
+    REG_BOUNDS = 2,   // + loop index
+    REG_STRIDES = 6,  // + loop index
+    REG_RPTR = 24,    // + ssr_dim
+    REG_WPTR = 28,    // + ssr_dim
+};
 
 /// Enable SSR.
-static inline void pulp_ssr_enable() {
-    asm volatile ("csrsi 0x7C0, 1");
+inline void ssr_enable() {
+#ifdef __TOOLCHAIN_LLVM__
+    __builtin_ssr_enable();
+#else
+    asm volatile("csrsi 0x7C0, 1\n");
+#endif
 }
 
 /// Disable SSR.
-static inline void pulp_ssr_disable() {
-    asm volatile ("csrci 0x7C0, 1");
+inline void ssr_disable() {
+#ifdef __TOOLCHAIN_LLVM__
+    __builtin_ssr_disable();
+#else
+    asm volatile("csrci 0x7C0, 1\n");
+#endif
+}
+
+inline uint32_t read_ssr_cfg(uint32_t reg, uint32_t dm) {
+    uint32_t value;
+    asm volatile("scfgri %[value], %[dm] | %[reg]<<5\n"
+                 : [ value ] "=r"(value)
+                 : [ dm ] "i"(dm), [ reg ] "i"(reg));
+    return value;
+}
+
+inline void write_ssr_cfg(uint32_t reg, uint32_t dm, uint32_t value) {
+    asm volatile("scfgwi %[value], %[dm] | %[reg]<<5\n" ::[value] "r"(value),
+                 [ dm ] "i"(dm), [ reg ] "i"(reg));
+}
+
+// Configure an SSR data mover for a 1D loop nest.
+inline void ssr_loop_1d(enum ssr_dm dm, size_t b0, size_t s0) {
+    --b0;
+    write_ssr_cfg(REG_BOUNDS + 0, dm, b0);
+    size_t a = 0;
+    write_ssr_cfg(REG_STRIDES + 0, dm, s0 - a);
+    a += s0 * b0;
+}
+
+// Configure an SSR data mover for a 2D loop nest.
+inline void ssr_loop_2d(enum ssr_dm dm, size_t b0, size_t b1,
+                             size_t s0, size_t s1) {
+    --b0;
+    --b1;
+    write_ssr_cfg(REG_BOUNDS + 0, dm, b0);
+    write_ssr_cfg(REG_BOUNDS + 1, dm, b1);
+    size_t a = 0;
+    write_ssr_cfg(REG_STRIDES + 0, dm, s0 - a);
+    a += s0 * b0;
+    write_ssr_cfg(REG_STRIDES + 1, dm, s1 - a);
+    a += s1 * b1;
+}
+
+// Configure an SSR data mover for a 3D loop nest.
+inline void ssr_loop_3d(enum ssr_dm dm, size_t b0, size_t b1,
+                             size_t b2, size_t s0, size_t s1, size_t s2) {
+    --b0;
+    --b1;
+    --b2;
+    write_ssr_cfg(REG_BOUNDS + 0, dm, b0);
+    write_ssr_cfg(REG_BOUNDS + 1, dm, b1);
+    write_ssr_cfg(REG_BOUNDS + 2, dm, b2);
+    size_t a = 0;
+    write_ssr_cfg(REG_STRIDES + 0, dm, s0 - a);
+    a += s0 * b0;
+    write_ssr_cfg(REG_STRIDES + 1, dm, s1 - a);
+    a += s1 * b1;
+    write_ssr_cfg(REG_STRIDES + 2, dm, s2 - a);
+    a += s2 * b2;
+}
+
+// Configure an SSR data mover for a 4D loop nest.
+// b0: Inner-most bound (limit of loop)
+// b3: Outer-most bound (limit of loop)
+// s0: increment size of inner-most loop
+inline void ssr_loop_4d(enum ssr_dm dm, size_t b0, size_t b1,
+                             size_t b2, size_t b3, size_t s0, size_t s1,
+                             size_t s2, size_t s3) {
+    --b0;
+    --b1;
+    --b2;
+    --b3;
+    write_ssr_cfg(REG_BOUNDS + 0, dm, b0);
+    write_ssr_cfg(REG_BOUNDS + 1, dm, b1);
+    write_ssr_cfg(REG_BOUNDS + 2, dm, b2);
+    write_ssr_cfg(REG_BOUNDS + 3, dm, b3);
+    size_t a = 0;
+    write_ssr_cfg(REG_STRIDES + 0, dm, s0 - a);
+    a += s0 * b0;
+    write_ssr_cfg(REG_STRIDES + 1, dm, s1 - a);
+    a += s1 * b1;
+    write_ssr_cfg(REG_STRIDES + 2, dm, s2 - a);
+    a += s2 * b2;
+    write_ssr_cfg(REG_STRIDES + 3, dm, s3 - a);
+    a += s3 * b3;
+}
+
+/// Configure the repetition count for a stream.
+inline void ssr_repeat(enum ssr_dm dm, size_t count) {
+    write_ssr_cfg(REG_REPEAT, dm, count - 1);
 }
 
 /// Start a streaming read.
-static inline void pulp_ssr_read(enum ssr_dm dm, enum ssr_dim dim, void *ptr) {
-    ssr_config_reg[dm].rptr[dim].value = (uint32_t)ptr;
+inline void ssr_read(enum ssr_dm dm, enum ssr_dim dim,
+                          volatile void *ptr) {
+    write_ssr_cfg(REG_RPTR + dim, dm, (uintptr_t)ptr);
 }
 
 /// Start a streaming write.
-static inline void pulp_ssr_write(enum ssr_dm dm, enum ssr_dim dim, void *ptr) {
-    ssr_config_reg[dm].wptr[dim].value = (uint32_t)ptr;
+inline void ssr_write(enum ssr_dm dm, enum ssr_dim dim,
+                           volatile void *ptr) {
+    write_ssr_cfg(REG_WPTR + dim, dm, (uintptr_t)ptr);
 }
+
 
 /// A DMA transfer indentifier.
 typedef uint32_t dma_txid_t;
@@ -269,13 +291,7 @@ static inline dma_txid_t dma_start_1d_wideptr(
     uint64_t src,
     size_t size
 ) {
-    //register dma_txid_t ret;
-    // Cut transferts
-    register size_t off = 0;
-    for(; size-off > 512; off+=512) {
-        __dma_start_1d_wideptr_base(dst+off, src+off, 512, 0);
-    }
-    return __dma_start_1d_wideptr_base(dst, src, size-off, 0);
+    return __dma_start_1d_wideptr_base(dst, src, size, 0);
 }
 
 /// Initiate a *de-serialized* (deadlock-prone) asynchronous 1D DMA transfer with wide 64-bit pointers.
@@ -441,36 +457,13 @@ static inline void dma_wait_all() {
     );
 }
 
-/// Initialize CHI bridge with a given source ID.
-static inline int chi_init(const uint16_t src_id) {
-    // Ensure that source ID does not exceed 11 bit.
-    if (src_id >= (1 << 11)) return 1;
-    // Write CHI bridge control register in SoC peripherals.
-    volatile uint32_t* const chi_bridge_cfg = (volatile uint32_t*)(0x2E000008);
-    *chi_bridge_cfg =
-                   1 <<  0  // enable CHI bridge
-            |      1 <<  1  // enable CHI TX
-            |      1 <<  2  // enable CHI RX
-            | src_id <<  3  // set source ID
-            ;
-    // Set up the cacheable region
-    volatile uint32_t* const chi_bridge_cacheable_region_mask_lo  = (volatile uint32_t*)(0x2E000018);
-    volatile uint32_t* const chi_bridge_cacheable_region_mask_hi  = (volatile uint32_t*)(0x2E00001C);
-    volatile uint32_t* const chi_bridge_cacheable_region_value_lo = (volatile uint32_t*)(0x2E000020);
-    volatile uint32_t* const chi_bridge_cacheable_region_value_hi = (volatile uint32_t*)(0x2E000024);
-    *chi_bridge_cacheable_region_mask_hi  = 0xFFFF8000;
-    *chi_bridge_cacheable_region_value_hi = 0x00008000;
-
-    return 0;
-}
-
-__attribute__((optnone)) void mutex_release(volatile uint32_t *pmtx) {
+static inline void mutex_release(volatile uint32_t *pmtx) {
     asm volatile("fence \n"
                  "amoswap.w.rl  x0,x0,(%0)   # Release lock by storing 0\n"
                  : "+r"(pmtx));
 }
 
-__attribute__((optnone)) void mutex_acquire(volatile uint32_t *pmtx) {
+static inline void mutex_acquire(volatile uint32_t *pmtx) {
     asm volatile(
         "li            t0,1          # t0 = 1\n"
         "1:\n"
@@ -481,5 +474,3 @@ __attribute__((optnone)) void mutex_acquire(volatile uint32_t *pmtx) {
         :
         : "t0");
 }
-
-#endif

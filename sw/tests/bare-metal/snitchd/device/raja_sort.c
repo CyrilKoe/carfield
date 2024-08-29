@@ -1,8 +1,8 @@
 
 // DMA Test with double buffering
 
-#include "printf.h"
-//#include "runtime.h"
+//#include "printf.h"
+#include "runtime.h"
 //#include "sw_mailbox.h"
 #include <inttypes.h>
 
@@ -12,13 +12,17 @@ void _putchar(char byte)
     //mailbox_write((uint32_t)byte);
 }
 
-
-extern volatile uint32_t l1_alloc_base;
-const uint32_t __attribute__((section(".init_l1"))) *l1_alloc_base_ptr = (uint32_t *) &l1_alloc_base;
+extern volatile char l1_alloc_base;
+__attribute__((section(".init_l1"))) char     * const  l1_alloc_base_ptr = (char *)     &l1_alloc_base;
 extern volatile uint32_t jump_address;
-const uint32_t __attribute__((section(".init_l1"))) *jump_address_ptr  = (uint32_t *) &jump_address;
+__attribute__((section(".init_l1"))) uint32_t * const  jump_address_ptr  = (uint32_t *) &jump_address;
 extern volatile uint32_t scratch_reg;
-const uint32_t __attribute__((section(".init_l1"))) *scratch_reg_ptr   = (uint32_t *) &scratch_reg;
+__attribute__((section(".init_l1"))) uint32_t * const  scratch_reg_ptr   = (uint32_t *) &scratch_reg;
+extern volatile uint32_t barrier_reg;
+__attribute__((section(".init_l1"))) uint32_t * const  barrier_reg_ptr   = (uint32_t *) &barrier_reg;
+
+uint64_t l1_buf_1[1024] __attribute__((section(".noinit_l1")));
+uint64_t l1_buf_2[1024] __attribute__((section(".noinit_l1")));
 
 
 /*
@@ -216,10 +220,15 @@ PULP_NOINLINE void merge_bufs(uint64_t buf_1_addr[8], uint64_t buf_2_addr[8], ui
 
 int main()
 {
-/*
     uint32_t core_idx     = pulp_get_core_id();
     int err               = 0;
+    
+    if (core_idx == 8) {
+        __dma_start_1d_wideptr_base((uint64_t) &l1_buf_1, 0x90000000, 1024*sizeof(uint64_t), 0);
+        __dma_start_1d_wideptr_base((uint64_t) &l1_buf_2, 0x90020000, 1024*sizeof(uint64_t), 0);
+    }
 
+/*
     if (core_idx == 8) {
         lock       = 0;
         g_mboxes   = (struct mboxes *)*eoc_address_ptr;

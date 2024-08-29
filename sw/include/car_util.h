@@ -409,12 +409,16 @@ void prepare_snitchd_boot () {
 }
 
 uint32_t poll_spatzd_corestatus () {
-
-	volatile uintptr_t status_addr = (uintptr_t)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x50);
-	// TODO: Add a timeut to not poll indefinitely
-	while (((uint32_t)readw(status_addr)) == 1)
-	    ;
-
+	volatile int a = 0;
+	while(true) {
+		volatile uintptr_t status_addr = (uintptr_t)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x50);
+		// TODO: Add a timeut to not poll indefinitely
+		a++;
+		if (((uint32_t)readw(status_addr)) == 1)
+		    break;
+		fence();
+		fencei();
+	}
 	return 0;
 }
 
@@ -429,6 +433,11 @@ uint32_t spatzd_offloader_blocking () {
 	load_binary();
 
 	fence();
+
+	*((uint32_t*) 0x2001010c) = 400;
+	*((uint32_t*) 0x20010104) = 400;
+	*((uint32_t*) 0x3001000) = 0;
+	*((uint32_t*) 0x3001010) = 1;
 
 	// Select bootmode, write entry point, write launch signal
 	prepare_snitchd_boot();

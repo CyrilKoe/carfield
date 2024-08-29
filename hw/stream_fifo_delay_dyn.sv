@@ -16,11 +16,11 @@ module stream_fifo_delay_dyn #(
   parameter int unsigned MaxDelay    = 1024,
   parameter int unsigned Depth       = 4,      // Power of two
   // DO NOT EDIT, derived parameters
-  localparam int unsigned CounterWidth = $clog2(MaxDelay) + 1
+  parameter int unsigned CounterWidth = $clog2(MaxDelay) + 1
 )(
   input  logic                    clk_i,
   input  logic                    rst_ni,
-  input  logic [CounterWidth-1:0] delay_i,
+  input  logic [CounterWidth-1 : 0]     delay_i,
   input  payload_t                payload_i,
   output logic                    ready_o,
   input  logic                    valid_i,
@@ -32,6 +32,7 @@ module stream_fifo_delay_dyn #(
   if (Depth & (Depth - 1) == 0)
     $fatal(1, "Depth must be a power of two");
 
+/*
   localparam int unsigned AddrWidth = (Depth > 1) ? $clog2(Depth) : 1;
 
   typedef logic    [AddrWidth-1:0] addr_t;
@@ -74,7 +75,7 @@ module stream_fifo_delay_dyn #(
     ready_level_d   = ready_level_q;
     if (fifo_push) begin
       fifo_d[write_pointer_q]   = payload_i;
-      target_d[write_pointer_q] = count_val + delay_i;
+      target_d[write_pointer_q] = count_val + delay_i + 1;
       write_pointer_d           = write_pointer_q + 1;
       fill_level_d              = fill_level_q + 1;
     end
@@ -121,6 +122,26 @@ module stream_fifo_delay_dyn #(
     end
   end
 
+*/
+
+  // head_deadline : latest element's deadline
+  // tail_deadline : next element's deadline
+  logic [CounterWidth-1 : 0] count_val;
+  logic [CounterWidth-1 : 0] head_deadline, tail_deadline;
+
+  logic fifos_full, fifos_empty, fifos_push, fifos_pop;
+
+  payload_t payload_fifo_o;
+
+  assign tail_deadline = (count_val + delay_i);
+  assign fifos_push = (delay_i != 0) & (~fifos_full) & valid_i;
+  assign fifos_pop = (count_val == head_deadline) && !(fifos_empty);
+
+  assign valid_o = (delay_i != 0) ? fifos_pop : valid_i;
+  assign ready_o = !fifos_full;
+
+  assign payload_o = (delay_i != 0) ? payload_fifo_o : payload_i;
+
   counter #(
     .WIDTH      ( CounterWidth )
   ) i_counter (
@@ -133,6 +154,42 @@ module stream_fifo_delay_dyn #(
     .d_i        ( '0           ),
     .q_o        ( count_val    ),
     .overflow_o (              )
+  );
+
+  fifo_v3 #(
+    .FALL_THROUGH(0),
+    .DATA_WIDTH($bits(payload_t)),
+    .DEPTH(Depth)
+  ) data_fifo (
+    .clk_i,
+    .rst_ni,
+    .flush_i(0),
+    .testmode_i(0),
+    .full_o(fifos_full),
+    .empty_o(fifos_empty),
+    .usage_o(),
+    .data_i(payload_i),
+    .push_i(fifos_push),
+    .data_o(payload_fifo_o),
+    .pop_i(fifos_pop)
+  );
+
+  fifo_v3 #(
+    .FALL_THROUGH(0),
+    .DATA_WIDTH(CounterWidth),
+    .DEPTH(Depth)
+  ) deadline_fifo (
+    .clk_i,
+    .rst_ni,
+    .flush_i(0),
+    .testmode_i(0),
+    .full_o(),
+    .empty_o(),
+    .usage_o(),
+    .data_i(tail_deadline),
+    .push_i(fifos_push),
+    .data_o(head_deadline),
+    .pop_i(fifos_pop)
   );
 
 endmodule
