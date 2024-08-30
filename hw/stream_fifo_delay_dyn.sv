@@ -11,6 +11,8 @@
 // Author: Enrico Zelioli, ezelioli@iis.ee.ethz.ch
 // Description: Delay and Buffer AXI-like handshaking
 
+`include "common_cells/registers.svh"
+
 module stream_fifo_delay_dyn #(
   parameter type payload_t           = logic,
   parameter int unsigned MaxDelay    = 1024,
@@ -124,23 +126,40 @@ module stream_fifo_delay_dyn #(
 
 */
 
+  localparam int unsigned BookeepingBits = $clog2(Depth) + 1;
+  logic [BookeepingBits-1 : 0] dead_count_d, dead_count_q;
+
   // head_deadline : latest element's deadline
   // tail_deadline : next element's deadline
   logic [CounterWidth-1 : 0] count_val;
   logic [CounterWidth-1 : 0] head_deadline, tail_deadline;
+  payload_t head_data;
 
-  logic fifos_full, fifos_empty, fifos_push, fifos_pop;
+  logic fifo_dead_full, fifo_dead_empty, fifo_dead_push, fifo_dead_pop;
+  logic fifo_data_full, fifo_data_empty, fifo_data_push, fifo_data_pop;
 
-  payload_t payload_fifo_o;
+  `FF(dead_count_q, dead_count_d, '0, clk_i, rst_ni);
 
-  assign tail_deadline = (count_val + delay_i);
-  assign fifos_push = (delay_i != 0) & (~fifos_full) & valid_i;
-  assign fifos_pop = (count_val == head_deadline) && !(fifos_empty);
+  always_comb begin
+    dead_count_d = dead_count_q;
+    if (fifo_dead_pop)
+      dead_count_d += 1;
+    if (fifo_data_pop)
+      dead_count_d -= 1;
+  end
 
-  assign valid_o = (delay_i != 0) ? fifos_pop : valid_i;
-  assign ready_o = !fifos_full;
+  assign tail_deadline = count_val + delay_i + 1;
 
-  assign payload_o = (delay_i != 0) ? payload_fifo_o : payload_i;
+  assign fifo_data_push = ~fifo_data_full & valid_i;
+  assign fifo_dead_push = fifo_data_push;
+
+  assign fifo_dead_pop = (count_val == head_deadline) & ~fifo_dead_empty;
+  assign fifo_data_pop = valid_o & ready_i;
+
+  assign valid_o = (dead_count_q > 0);
+  assign ready_o = ~fifo_data_full;
+
+  assign payload_o = head_data;
 
   counter #(
     .WIDTH      ( CounterWidth )
@@ -156,40 +175,64 @@ module stream_fifo_delay_dyn #(
     .overflow_o (              )
   );
 
-  fifo_v3 #(
-    .FALL_THROUGH(0),
-    .DATA_WIDTH($bits(payload_t)),
-    .DEPTH(Depth)
+  xpm_fifo_sync #(
+    .FIFO_MEMORY_TYPE    ( "auto"                      ) , // string; "auto", "block", "distributed", or "ultra";
+    .ECC_MODE            ( "no_ecc"                    ) , // string; "no_ecc" or "en_ecc";
+    .FIFO_WRITE_DEPTH    ( Depth                       ) , // positive integer
+    .WRITE_DATA_WIDTH    ( $bits(payload_t)            ) , // positive integer
+    .WR_DATA_COUNT_WIDTH ( $clog2($bits(payload_t))+1  ) , // positive integer, not used
+    .PROG_FULL_THRESH    ( 10                          ) , // positive integer, not used
+    .FULL_RESET_VALUE    ( 1                           ) , // positive integer; 0 or 1
+    .USE_ADV_FEATURES    ( "1F1F"                      ) , // string; "0000" to "1F1F";
+    .READ_MODE           ( "std"                       ) , // string; "std" or "fwft";
+    .FIFO_READ_LATENCY   ( 0                           ) , // positive integer;
+    .READ_DATA_WIDTH     ( $bits(payload_t)            ) , // positive integer
+    .RD_DATA_COUNT_WIDTH ( $clog2($bits(payload_t))+1  ) , // positive integer, not used
+    .PROG_EMPTY_THRESH   ( 10                          ) , // positive integer, not used
+    .DOUT_RESET_VALUE    ( "0"                         ) , // string, don't care
+    .WAKEUP_TIME         ( 0                           ) // positive integer; 0 or 2;
   ) data_fifo (
-    .clk_i,
-    .rst_ni,
-    .flush_i(0),
-    .testmode_i(0),
-    .full_o(fifos_full),
-    .empty_o(fifos_empty),
-    .usage_o(),
-    .data_i(payload_i),
-    .push_i(fifos_push),
-    .data_o(payload_fifo_o),
-    .pop_i(fifos_pop)
+    .sleep('0),
+    .injectsbiterr('0),
+    .injectdbiterr('0),
+    .wr_clk(clk_i),
+    .rst(~rst_ni),
+    .wr_en(fifo_data_push),
+    .rd_en(fifo_data_pop),
+    .full(fifo_data_full),
+    .empty(fifo_data_empty),
+    .din(payload_i),
+    .dout(head_data)
   );
 
-  fifo_v3 #(
-    .FALL_THROUGH(0),
-    .DATA_WIDTH(CounterWidth),
-    .DEPTH(Depth)
+  xpm_fifo_sync #(
+    .FIFO_MEMORY_TYPE    ( "auto"                      ) , // string; "auto", "block", "distributed", or "ultra";
+    .ECC_MODE            ( "no_ecc"                    ) , // string; "no_ecc" or "en_ecc";
+    .FIFO_WRITE_DEPTH    ( Depth                       ) , // positive integer
+    .WRITE_DATA_WIDTH    ( CounterWidth            ) , // positive integer
+    .WR_DATA_COUNT_WIDTH ( $clog2(CounterWidth)+1  ) , // positive integer, not used
+    .PROG_FULL_THRESH    ( 10                          ) , // positive integer, not used
+    .FULL_RESET_VALUE    ( 1                           ) , // positive integer; 0 or 1
+    .USE_ADV_FEATURES    ( "1F1F"                      ) , // string; "0000" to "1F1F";
+    .READ_MODE           ( "std"                       ) , // string; "std" or "fwft";
+    .FIFO_READ_LATENCY   ( 0                           ) , // positive integer;
+    .READ_DATA_WIDTH     ( CounterWidth            ) , // positive integer
+    .RD_DATA_COUNT_WIDTH ( $clog2(CounterWidth)+1  ) , // positive integer, not used
+    .PROG_EMPTY_THRESH   ( 10                          ) , // positive integer, not used
+    .DOUT_RESET_VALUE    ( "0"                         ) , // string, don't care
+    .WAKEUP_TIME         ( 0                           ) // positive integer; 0 or 2;
   ) deadline_fifo (
-    .clk_i,
-    .rst_ni,
-    .flush_i(0),
-    .testmode_i(0),
-    .full_o(),
-    .empty_o(),
-    .usage_o(),
-    .data_i(tail_deadline),
-    .push_i(fifos_push),
-    .data_o(head_deadline),
-    .pop_i(fifos_pop)
+    .sleep('0),
+    .injectsbiterr('0),
+    .injectdbiterr('0),
+    .wr_clk(clk_i),
+    .rst(~rst_ni),
+    .wr_en(fifo_dead_push),
+    .rd_en(fifo_dead_pop),
+    .full(fifo_dead_full),
+    .empty(fifo_dead_empty),
+    .din(tail_deadline),
+    .dout(head_deadline)
   );
 
 endmodule

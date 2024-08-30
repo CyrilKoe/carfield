@@ -114,10 +114,10 @@ packages:
       Git: git@github.com:AlSaqr-platform/can_bus.git
     dependencies: []
   cheshire:
-    revision: 0c95210cf242c384fafe3019e84b8974c3ff1e92
+    revision: 2f00d0a8a8e2f4e47a6249a8bd778af937c609a9
     version: null
     source:
-      Git: https://github.com/pulp-platform/cheshire.git
+      Git: https://github.com/CyrilKoe/cheshire.git
     dependencies:
     - apb_uart
     - axi

@@ -224,8 +224,8 @@ int main()
     int err               = 0;
     
     if (core_idx == 8) {
-        __dma_start_1d_wideptr_base((uint64_t) &l1_buf_1, 0x90000000, 1024*sizeof(uint64_t), 0);
-        __dma_start_1d_wideptr_base((uint64_t) &l1_buf_2, 0x90020000, 1024*sizeof(uint64_t), 0);
+        __dma_start_1d_wideptr_base((uint64_t) &l1_buf_1, 0xC0000000, 1024*sizeof(uint64_t), 0);
+        __dma_start_1d_wideptr_base((uint64_t) &l1_buf_2, 0xC0020000, 1024*sizeof(uint64_t), 0);
     }
 
 /*
