@@ -22,8 +22,8 @@ SNITCHD_HEADER_TARGETS = $(SNITCHD_SW_DIR)/build/hello_world.h
 $(SNITCHD_SW_DIR)/build:
 	mkdir -p $@
 
-$(SNITCHD_SW_DIR)/build/hello_world.elf: $(SNITCHD_SW_DIR)/hello_world.c | $(SNITCHD_SW_DIR)/build
-	$(SNITCHD_CC) $(SNITCHD_CFLAGS) $(SNITCHD_LDFLAGS) $< $(SNITCHD_SW_DIR)/runtime/crt0.S -o $@
+$(SNITCHD_SW_DIR)/build/hello_world.elf: $(SNITCHD_SW_DIR)/hello_world.c $(SNITCHD_SW_DIR)/runtime/crt0.S $(SNITCHD_SW_DIR)/runtime/link.ld | $(SNITCHD_SW_DIR)/build
+	$(SNITCHD_CC) $(SNITCHD_CFLAGS) $(SNITCHD_LDFLAGS) $(filter %.S,$^) $(filter %.c,$^) -o $@
 
 $(SNITCHD_SW_DIR)/build/hello_world.h: $(SNITCHD_SW_DIR)/build/hello_world.elf | venv
 	$(VENV)/python $(CAR_ROOT)/scripts/elf2header.py --binary $< --vectors $@

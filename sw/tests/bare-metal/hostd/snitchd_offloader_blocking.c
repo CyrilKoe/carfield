@@ -21,7 +21,7 @@
 int main(void)
 {
 	// Set IOMMU to bare
-	writew(0x1, car_iommu + 0x10);
+	// writew(0x1, car_iommu + 0x10);
 
 	// Ungate the cluster
 	car_enable_domain(CAR_SPATZ_RST);

@@ -10,8 +10,6 @@ extern volatile uint8_t l1_alloc_base;
 typedef uint32_t pulp_id_t;
 typedef uint32_t pulp_timer_t;
 
-extern volatile uint32_t barrier_reg;
-
 #define l1_alloc(size, l1_alloc_base_ptr) next_l1_alloc; next_l1_alloc += size;
 
 static inline void * const get_l1_alloc_base() { return &l1_alloc_base;}
@@ -50,44 +48,13 @@ static inline void fpu_fence() {
 
 /// A cluster-local barrier.
 static inline void pulp_barrier() {
-    // // The following is a software-only barrier using AMOs.
-    // uint32_t core_id = pulp_get_core_id();
-    // uint32_t core_count = pulp_get_core_count();
-    // uint32_t mask = 1 << core_id;
-    // uint32_t others = ((1 << core_count) - 1) ^ mask;
-    // if (core_id == 0) {
-    //     while ((__atomic_load_n(&atomic_barrier, __ATOMIC_RELAXED) & others) != others);
-    //     __atomic_or_fetch(&atomic_barrier, mask, __ATOMIC_RELAXED);
-    //     while ((__atomic_load_n(&atomic_barrier, __ATOMIC_RELAXED) & others) != 0);
-    //     __atomic_and_fetch(&atomic_barrier, ~mask, __ATOMIC_RELAXED);
-    // } else {
-    //     while ((__atomic_load_n(&atomic_barrier, __ATOMIC_RELAXED) & 1) != 0);
-    //     __atomic_or_fetch(&atomic_barrier, mask, __ATOMIC_RELAXED);
-    //     while ((__atomic_load_n(&atomic_barrier, __ATOMIC_RELAXED) & 1) != 1);
-    //     __atomic_and_fetch(&atomic_barrier, ~mask, __ATOMIC_RELAXED);
-    // }
-
-    // The following uses the hardware barrier.
-    uint32_t tmp;
     fpu_fence();
-    asm volatile (
-        "lw %[tmp], 0(%[addr]) \n"
-        "mv zero, %[tmp] \n"
-        : [tmp] "=r"(tmp)
-        : [addr] "r"(&barrier_reg)
-        : "memory");
     asm volatile("csrr x0, 0x7C2" ::: "memory");
 }
 
 /// A cluster-local barrier *without* FPU fence
 static inline void pulp_barrier_nofpu() {
-    uint32_t tmp;
-    asm volatile (
-        "lw %[tmp], 0(%[addr]) \n"
-        "mv zero, %[tmp] \n"
-        : [tmp] "=r"(tmp)
-        : [addr] "r"(&barrier_reg)
-        : "memory");
+    asm volatile("csrr x0, 0x7C2" ::: "memory");
 }
 
 

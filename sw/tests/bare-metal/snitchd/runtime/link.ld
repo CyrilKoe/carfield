@@ -120,9 +120,7 @@ SECTIONS
     . = . + 0x4;
     scratch_reg = .;
     . = . + 0x4;
-    tcdm_end_address_reg = .;
-    . = . + 0x4;
-    barrier_reg = .;
+    eoc_address = .;
     . = . + 0x4;
     *(.init_l1)
   } >L1

@@ -45,8 +45,8 @@ module cheshire_wrap
   parameter int unsigned LogDepth = 3,
   parameter int unsigned CdcSyncStages = 2,
   // External Slaves Parameters
-  // Having a dedicated synchronous port, the mailbox and iommu are not taken into account
-  parameter int unsigned NumSlaveCDCs = Cfg.AxiExtNumSlv - 2,
+  // Having a dedicated synchronous port, the mailbox are not taken into account
+  parameter int unsigned NumSlaveCDCs = Cfg.AxiExtNumSlv - CarfieldIslandsCfg.mbox.enable,
   parameter axi_in_t    AxiIn  = gen_axi_in(Cfg) ,
   parameter axi_out_t   AxiOut = gen_axi_out(Cfg),
   // LLC Parameters
@@ -277,8 +277,13 @@ cheshire_reg_ext_rsp_t [iomsb(Cfg.RegExtNumSlv):0] ext_reg_rsp;
 
 // Generate synchronous external register interface from Cheshire
 for (genvar i = 0; i < NumSyncRegSlv; i++) begin: gen_ext_reg_sync
-  assign reg_ext_slv_req_o[i] = ext_reg_req[i];
-  assign ext_reg_rsp[i]       = reg_ext_slv_rsp_i[i];
+  // IOMMMUs are instanciated in this module
+  if (i == CarfieldRegBusSlvIdx.iommus && CarfieldRegBusCfg.iommus.enable) begin
+    ;
+  end else begin
+    assign reg_ext_slv_req_o[i] = ext_reg_req[i];
+    assign ext_reg_rsp[i]       = reg_ext_slv_rsp_i[i];
+  end
 end
 
 cheshire_soc #(
@@ -428,106 +433,47 @@ for (genvar i = 0; i < NumSlaveCDCs; i++) begin: gen_ext_slv_src_cdc
   );
 end
 
-// Cheshire's AXI slave cdc and isolate generation, except for the Integer Cluster (slave 7)
+// Cheshire's AXI slave cdc and isolate generation, except for the IOMMUs
 for (genvar i = 0; i < Cfg.AxiExtNumMst; i++) begin: gen_ext_mst_dst_cdc
-  if ( i != IOMMUMstIdx )
-  axi_cdc_dst #(
-    .LogDepth   ( LogDepth                   ),
-    .SyncStages ( CdcSyncStages              ),
-    .aw_chan_t  ( cheshire_axi_ext_mst_aw_chan_t ),
-    .w_chan_t   ( cheshire_axi_ext_mst_w_chan_t  ),
-    .b_chan_t   ( cheshire_axi_ext_mst_b_chan_t  ),
-    .ar_chan_t  ( cheshire_axi_ext_mst_ar_chan_t ),
-    .r_chan_t   ( cheshire_axi_ext_mst_r_chan_t  ),
-    .axi_req_t  ( cheshire_axi_ext_mst_req_t     ),
-    .axi_resp_t ( cheshire_axi_ext_mst_rsp_t     )
-  ) i_cheshire_ext_mst_cdc_dst  (
-    // asynchronous slave port
-    .async_data_slave_aw_data_i ( axi_ext_mst_aw_data_i [i] ),
-    .async_data_slave_aw_wptr_i ( axi_ext_mst_aw_wptr_i [i] ),
-    .async_data_slave_aw_rptr_o ( axi_ext_mst_aw_rptr_o [i] ),
-    .async_data_slave_w_data_i  ( axi_ext_mst_w_data_i  [i] ),
-    .async_data_slave_w_wptr_i  ( axi_ext_mst_w_wptr_i  [i] ),
-    .async_data_slave_w_rptr_o  ( axi_ext_mst_w_rptr_o  [i] ),
-    .async_data_slave_b_data_o  ( axi_ext_mst_b_data_o  [i] ),
-    .async_data_slave_b_wptr_o  ( axi_ext_mst_b_wptr_o  [i] ),
-    .async_data_slave_b_rptr_i  ( axi_ext_mst_b_rptr_i  [i] ),
-    .async_data_slave_ar_data_i ( axi_ext_mst_ar_data_i [i] ),
-    .async_data_slave_ar_wptr_i ( axi_ext_mst_ar_wptr_i [i] ),
-    .async_data_slave_ar_rptr_o ( axi_ext_mst_ar_rptr_o [i] ),
-    .async_data_slave_r_data_o  ( axi_ext_mst_r_data_o  [i] ),
-    .async_data_slave_r_wptr_o  ( axi_ext_mst_r_wptr_o  [i] ),
-    .async_data_slave_r_rptr_i  ( axi_ext_mst_r_rptr_i  [i] ),
-    // synchronous master port
-    .dst_clk_i                  ( clk_i               ),
-    .dst_rst_ni                 ( rst_ni              ),
-    .dst_req_o                  ( axi_ext_mst_pre_mmu_req [i] ),
-    .dst_resp_i                 ( axi_ext_mst_pre_mmu_rsp [i] )
-  );
-end
-
-for (genvar i = 0; i < Cfg.AxiExtNumMst; i++) begin: gen_ext_mst_iommu_bypass
-  if ( i != FPClusterMstIdx ) begin
-    `AXI_ASSIGN_REQ_STRUCT(axi_ext_mst_post_mmu_req[i], axi_ext_mst_pre_mmu_req[i])
-    `AXI_ASSIGN_RESP_STRUCT(axi_ext_mst_pre_mmu_rsp[i], axi_ext_mst_post_mmu_rsp[i])
+  if ( i == SpatzIOMMUMstIdx && CarfieldIslandsCfg.spatz_iommu.enable ||
+       i == SafetyIOMMUMstIdx && CarfieldIslandsCfg.safed_iommu.enable ) begin
+    ;
+  end else begin
+    axi_cdc_dst #(
+      .LogDepth   ( LogDepth                   ),
+      .SyncStages ( CdcSyncStages              ),
+      .aw_chan_t  ( cheshire_axi_ext_mst_aw_chan_t ),
+      .w_chan_t   ( cheshire_axi_ext_mst_w_chan_t  ),
+      .b_chan_t   ( cheshire_axi_ext_mst_b_chan_t  ),
+      .ar_chan_t  ( cheshire_axi_ext_mst_ar_chan_t ),
+      .r_chan_t   ( cheshire_axi_ext_mst_r_chan_t  ),
+      .axi_req_t  ( cheshire_axi_ext_mst_req_t     ),
+      .axi_resp_t ( cheshire_axi_ext_mst_rsp_t     )
+    ) i_cheshire_ext_mst_cdc_dst  (
+      // asynchronous slave port
+      .async_data_slave_aw_data_i ( axi_ext_mst_aw_data_i [i] ),
+      .async_data_slave_aw_wptr_i ( axi_ext_mst_aw_wptr_i [i] ),
+      .async_data_slave_aw_rptr_o ( axi_ext_mst_aw_rptr_o [i] ),
+      .async_data_slave_w_data_i  ( axi_ext_mst_w_data_i  [i] ),
+      .async_data_slave_w_wptr_i  ( axi_ext_mst_w_wptr_i  [i] ),
+      .async_data_slave_w_rptr_o  ( axi_ext_mst_w_rptr_o  [i] ),
+      .async_data_slave_b_data_o  ( axi_ext_mst_b_data_o  [i] ),
+      .async_data_slave_b_wptr_o  ( axi_ext_mst_b_wptr_o  [i] ),
+      .async_data_slave_b_rptr_i  ( axi_ext_mst_b_rptr_i  [i] ),
+      .async_data_slave_ar_data_i ( axi_ext_mst_ar_data_i [i] ),
+      .async_data_slave_ar_wptr_i ( axi_ext_mst_ar_wptr_i [i] ),
+      .async_data_slave_ar_rptr_o ( axi_ext_mst_ar_rptr_o [i] ),
+      .async_data_slave_r_data_o  ( axi_ext_mst_r_data_o  [i] ),
+      .async_data_slave_r_wptr_o  ( axi_ext_mst_r_wptr_o  [i] ),
+      .async_data_slave_r_rptr_i  ( axi_ext_mst_r_rptr_i  [i] ),
+      // synchronous master port
+      .dst_clk_i                  ( clk_i               ),
+      .dst_rst_ni                 ( rst_ni              ),
+      .dst_req_o                  ( axi_ext_mst_pre_mmu_req [i] ),
+      .dst_resp_i                 ( axi_ext_mst_pre_mmu_rsp [i] )
+    );
   end
 end
-
-`CARFIELD_TYPEDEF_IOMMU(axi_iommu, Cfg);
-
-// IOMMU
-axi_iommu_req_t axi_iommu_req;
-axi_iommu_rsp_t axi_iommu_rsp;
-`AXI_ASSIGN_REQ_STRUCT(axi_iommu_req, axi_ext_mst_pre_mmu_req[FPClusterMstIdx])
-`AXI_ASSIGN_RESP_STRUCT(axi_ext_mst_pre_mmu_rsp[FPClusterMstIdx], axi_iommu_rsp)
-assign axi_iommu_req.aw.stream_id = '0;
-assign axi_iommu_req.aw.ss_id_valid = '1;
-assign axi_iommu_req.aw.substream_id = '0;
-assign axi_iommu_req.ar.stream_id = '0;
-assign axi_iommu_req.ar.ss_id_valid = '1;
-assign axi_iommu_req.ar.substream_id = '0;
-// For now put the IOMMU IRQs at the end (unused) of the ext irqs
-assign intr_ext_fixme = {intr_iommu, intr_ext_i[iomsb(Cfg.NumExtInIntrs)-IOMMU_N_INT_VEC:0]};
-
-riscv_iommu #(
-  .InclPC           ( 0                               ),
-  .InclBC           ( 0                               ),
-  .InclDBG          ( 1                               ),
-  .N_INT_VEC        ( IOMMU_N_INT_VEC                 ),
-  .ADDR_WIDTH			  ( Cfg.AddrWidth                   ),
-  .DATA_WIDTH			  ( Cfg.AxiDataWidth                ),
-  .ID_WIDTH			    ( Cfg.AxiMstIdWidth               ),
-  .ID_SLV_WIDTH		  ( Cfg.AxiMstIdWidth               ),
-  .USER_WIDTH			  ( Cfg.AxiUserWidth                ),
-  .aw_chan_t			  ( cheshire_axi_ext_mst_aw_chan_t  ),
-  .w_chan_t			    ( cheshire_axi_ext_mst_w_chan_t   ),
-  .b_chan_t			    ( cheshire_axi_ext_mst_b_chan_t   ),
-  .ar_chan_t			  ( cheshire_axi_ext_mst_ar_chan_t  ),
-  .r_chan_t		      ( cheshire_axi_ext_mst_r_chan_t   ),
-  .axi_req_t			  ( cheshire_axi_ext_mst_req_t      ),
-  .axi_rsp_t			  ( cheshire_axi_ext_mst_rsp_t      ),
-  .axi_req_slv_t		( cheshire_axi_ext_slv_req_t      ),
-  .axi_rsp_slv_t		( cheshire_axi_ext_slv_rsp_t      ),
-  .axi_req_iommu_t  ( axi_iommu_req_t                 ),
-  .reg_req_t		    ( cheshire_reg_ext_req_t          ),
-  .reg_rsp_t		    ( cheshire_reg_ext_rsp_t          )
-) i_spatz_iommu (
-  .clk_i,
-  .rst_ni,
-  // Translation Request Interface (Slave)
-  .dev_tr_req_i		  ( axi_iommu_req ),
-  .dev_tr_resp_o	  ( axi_iommu_rsp ),
-  // Translation Completion Interface (Master)
-  .dev_comp_resp_i  ( axi_ext_mst_post_mmu_rsp[FPClusterMstIdx]),
-  .dev_comp_req_o   ( axi_ext_mst_post_mmu_req[FPClusterMstIdx]),
-  // Implicit Memory Accesses Interface (Master)
-  .ds_resp_i			  ( axi_ext_mst_pre_mmu_rsp[IOMMUMstIdx]     ),
-  .ds_req_o			    ( axi_ext_mst_pre_mmu_req[IOMMUMstIdx]     ),
-  // Programming Interface (Slave) (AXI4 Full -> AXI4-Lite -> Reg IF)
-  .prog_req_i			  ( axi_ext_slv_req[IOMMUSlvIdx]         ),
-  .prog_resp_o		  ( axi_ext_slv_rsp[IOMMUSlvIdx]         ),
-  .wsi_wires_o 		  ( intr_iommu                           )
-);
 
   axi_fifo_delay_dyn #(
   .aw_chan_t    (cheshire_axi_ext_llc_aw_chan_t),
@@ -635,5 +581,86 @@ for (genvar i = 0; i < NumAsyncRegSlv; i++) begin : gen_ext_reg_async
       .async_data_i ( ext_reg_async_slv_data_i[i] )
   );
 end
+
+/********************
+ * IOMMUs           *
+ *******************/
+
+// Bypass IOMMU if not needed (post_mmu = pre_mmu)
+for (genvar i = 0; i < Cfg.AxiExtNumMst; i++) begin: gen_ext_mst_iommu_bypass
+  if ( i == FPClusterMstIdx && carfield_configuration::SpatzIOMMUEnable   ||
+       i == SafetyIslandMstIdx && carfield_configuration::SafetyIOMMUEnable
+     ) /* Do nothing */ ;
+  else begin
+    `AXI_ASSIGN_REQ_STRUCT(axi_ext_mst_post_mmu_req[i], axi_ext_mst_pre_mmu_req[i])
+    `AXI_ASSIGN_RESP_STRUCT(axi_ext_mst_pre_mmu_rsp[i], axi_ext_mst_post_mmu_rsp[i])
+  end
+end
+
+generate
+  if( carfield_configuration::SpatzIOMMUEnable ) begin
+    // Reg to AXI for IOMMU config
+    //ext_reg_rsp
+    //ext_reg_resp
+    cheshire_axi_ext_slv_req_t spatz_iommu_prog_req;
+    cheshire_axi_ext_slv_rsp_t spatz_iommu_prog_rsp;
+
+    `CARFIELD_TYPEDEF_IOMMU(axi_iommu, Cfg);
+
+    // IOMMU
+    axi_iommu_req_t axi_iommu_req;
+    axi_iommu_rsp_t axi_iommu_rsp;
+    `AXI_ASSIGN_REQ_STRUCT(axi_iommu_req, axi_ext_mst_pre_mmu_req[FPClusterMstIdx])
+    `AXI_ASSIGN_RESP_STRUCT(axi_ext_mst_pre_mmu_rsp[FPClusterMstIdx], axi_iommu_rsp)
+    assign axi_iommu_req.aw.stream_id = '0;
+    assign axi_iommu_req.aw.ss_id_valid = '1;
+    assign axi_iommu_req.aw.substream_id = '0;
+    assign axi_iommu_req.ar.stream_id = '0;
+    assign axi_iommu_req.ar.ss_id_valid = '1;
+    assign axi_iommu_req.ar.substream_id = '0;
+    // For now put the IOMMU IRQs at the end (unused) of the ext irqs
+    assign intr_ext_fixme = {intr_iommu, intr_ext_i[iomsb(Cfg.NumExtInIntrs)-IOMMU_N_INT_VEC:0]};
+    
+    riscv_iommu #(
+      .InclPC           ( 0                               ),
+      .InclBC           ( 0                               ),
+      .InclDBG          ( 1                               ),
+      .N_INT_VEC        ( IOMMU_N_INT_VEC                 ),
+      .ADDR_WIDTH			  ( Cfg.AddrWidth                   ),
+      .DATA_WIDTH			  ( Cfg.AxiDataWidth                ),
+      .ID_WIDTH			    ( Cfg.AxiMstIdWidth               ),
+      .ID_SLV_WIDTH		  ( Cfg.AxiMstIdWidth               ),
+      .USER_WIDTH			  ( Cfg.AxiUserWidth                ),
+      .aw_chan_t			  ( cheshire_axi_ext_mst_aw_chan_t  ),
+      .w_chan_t			    ( cheshire_axi_ext_mst_w_chan_t   ),
+      .b_chan_t			    ( cheshire_axi_ext_mst_b_chan_t   ),
+      .ar_chan_t			  ( cheshire_axi_ext_mst_ar_chan_t  ),
+      .r_chan_t		      ( cheshire_axi_ext_mst_r_chan_t   ),
+      .axi_req_t			  ( cheshire_axi_ext_mst_req_t      ),
+      .axi_rsp_t			  ( cheshire_axi_ext_mst_rsp_t      ),
+      .axi_req_slv_t		( cheshire_axi_ext_slv_req_t      ),
+      .axi_rsp_slv_t		( cheshire_axi_ext_slv_rsp_t      ),
+      .axi_req_iommu_t  ( axi_iommu_req_t                 ),
+      .reg_req_t		    ( cheshire_reg_ext_req_t          ),
+      .reg_rsp_t		    ( cheshire_reg_ext_rsp_t          )
+    ) i_spatz_iommu (
+      .clk_i,
+      .rst_ni,
+      // Translation Request Interface (Slave)
+      .dev_tr_req_i		  ( axi_iommu_req ),
+      .dev_tr_resp_o	  ( axi_iommu_rsp ),
+      // Translation Completion Interface (Master)
+      .dev_comp_resp_i  ( axi_ext_mst_post_mmu_rsp[FPClusterMstIdx]),
+      .dev_comp_req_o   ( axi_ext_mst_post_mmu_req[FPClusterMstIdx]),
+      // Implicit Memory Accesses Interface (Master)
+      .ds_resp_i			  ( axi_ext_mst_pre_mmu_rsp[SpatzIOMMUMstIdx]),
+      .ds_req_o			    ( axi_ext_mst_pre_mmu_req[SpatzIOMMUMstIdx]),
+      // Programming Interface (Slave) (AXI4 Full -> AXI4-Lite -> Reg IF)
+      .prog_req_i			  ( /* Todo */ ),
+      .prog_resp_o		  ( /* Todo */ ),
+      .wsi_wires_o 		  ( intr_iommu                           )
+    );
+  end
+endgenerate
 
 endmodule: cheshire_wrap

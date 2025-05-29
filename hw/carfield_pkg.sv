@@ -35,10 +35,11 @@ typedef struct packed {
   islands_properties_t l2_port0;
   islands_properties_t l2_port1;
   islands_properties_t safed;
+  islands_properties_t safed_iommu;
   islands_properties_t ethernet;
   islands_properties_t periph;
   islands_properties_t spatz;
-  islands_properties_t iommu;
+  islands_properties_t spatz_iommu;
   islands_properties_t pulp;
   islands_properties_t secured;
   islands_properties_t mbox;
@@ -65,13 +66,13 @@ typedef struct packed {
   byte_bt spatz;
   byte_bt pulp;
   byte_bt mbox;
-  byte_bt iommu;
 } carfield_slave_idx_t;
 
 typedef struct packed {
   byte_bt safed;
+  byte_bt safed_iommu;
   byte_bt spatz;
-  byte_bt iommu;
+  byte_bt spatz_iommu;
   byte_bt secured;
   byte_bt pulp;
 } carfield_master_idx_t;
@@ -91,7 +92,6 @@ function automatic int unsigned gen_num_axi_slave(islands_cfg_t island_cfg);
   if (island_cfg.spatz.enable   ) begin ret++; end
   if (island_cfg.pulp.enable    ) begin ret++; end
   if (island_cfg.mbox.enable    ) begin ret++; end
-  if (island_cfg.iommu.enable   ) begin ret++; end
   return ret;
 endfunction
 
@@ -118,8 +118,6 @@ function automatic carfield_slave_idx_t carfield_gen_axi_slave_idx(islands_cfg_t
   end else begin ret.pulp = MaxExtAxiSlv + j; j++; end
   if (island_cfg.mbox.enable) begin ret.mbox = i; i++;
   end else begin ret.mbox = MaxExtAxiSlv + j; j++; end
-  if (island_cfg.iommu.enable) begin ret.iommu = i; i++;
-  end else begin ret.iommu = MaxExtAxiSlv + j; j++; end
   return ret;
 endfunction
 
@@ -128,8 +126,9 @@ endfunction
 function automatic int unsigned gen_num_axi_master(islands_cfg_t island_cfg);
   int unsigned ret = 0; // Number of masters starts from 0
   if (island_cfg.safed.enable  ) begin ret++; end
+  if (island_cfg.safed_iommu.enable  ) begin ret++; end
   if (island_cfg.spatz.enable  ) begin ret++; end
-  if (island_cfg.iommu.enable  ) begin ret++; end
+  if (island_cfg.spatz_iommu.enable  ) begin ret++; end
   if (island_cfg.pulp.enable   ) begin ret++; end
   if (island_cfg.secured.enable) begin ret++; end
   return ret;
@@ -143,12 +142,14 @@ function automatic carfield_master_idx_t carfield_gen_axi_master_idx(islands_cfg
   byte_bt j = 0;
   if (island_cfg.safed.enable) begin ret.safed = i; i++;
   end else begin ret.safed = MaxExtAxiMst + j; j++; end
+  if (island_cfg.safed_iommu.enable) begin ret.safed_iommu = i; i++;
+  end else begin ret.safed_iommu = MaxExtAxiMst + j; j++; end
   if (island_cfg.secured.enable) begin ret.secured = i; i++;
   end else begin ret.secured = MaxExtAxiMst + j; j++; end
   if (island_cfg.spatz.enable) begin ret.spatz = i; i++;
   end else begin ret.spatz = MaxExtAxiMst + j; j++; end
-  if (island_cfg.iommu.enable) begin ret.iommu = i; i++;
-  end else begin ret.iommu = MaxExtAxiMst + j; j++; end
+  if (island_cfg.spatz_iommu.enable) begin ret.spatz_iommu = i; i++;
+  end else begin ret.spatz_iommu = MaxExtAxiMst + j; j++; end
   if (island_cfg.pulp.enable) begin ret.pulp = i; i++;
   end else begin ret.pulp = MaxExtAxiMst + j; j++; end
   return ret;
@@ -208,12 +209,6 @@ function automatic axi_struct_t carfield_gen_axi_map(int unsigned NumSlave  ,
     ret.AxiEnd[i] = island_cfg.mbox.base + island_cfg.mbox.size;
     if (i < NumSlave - 1) i++;
   end
-  if (island_cfg.iommu.enable) begin
-    ret.AxiIdx[i] = idx.iommu;
-    ret.AxiStart[i] = island_cfg.iommu.base;
-    ret.AxiEnd[i] = island_cfg.iommu.base + island_cfg.iommu.size;
-    if (i < NumSlave - 1) i++;
-  end
   return ret;
 endfunction
 
@@ -225,6 +220,7 @@ typedef struct packed {
   islands_properties_t pll;
   islands_properties_t padframe;
   islands_properties_t l2ecc;
+  islands_properties_t iommus;
 } regbus_cfg_t;
 
 typedef struct packed {
@@ -232,6 +228,7 @@ typedef struct packed {
   byte_bt pll;
   byte_bt padframe;
   byte_bt l2ecc;
+  byte_bt iommus;
 } carfield_regbus_slave_idx_t;
 
 // Generate the number of AXI slave devices to be connected to the
@@ -239,6 +236,7 @@ typedef struct packed {
 function automatic int unsigned gen_num_regbus_sync_slave(regbus_cfg_t regbus_cfg);
   int unsigned ret = 0; // Number of slaves starts from 0
   if (regbus_cfg.pcrs.enable) begin ret++; end
+  // iommus
   return ret;
 endfunction
 
@@ -254,7 +252,8 @@ localparam regbus_cfg_t CarfieldRegBusCfg = '{
   pcrs:     '{1, PcrsBase, PcrsSize},
   pll:      '{PllCfgEnable, PllCfgBase, PllCfgSize},
   padframe: '{PadframeCfgEnable, PadframeCfgBase, PadframeCfgSize},
-  l2ecc:    '{L2EccCfgEnable, L2EccCfgBase, L2EccCfgSize}
+  l2ecc:    '{L2EccCfgEnable, L2EccCfgBase, L2EccCfgSize},
+  iommus:   '{IOMMUsEnable, IOMMUsBase, IOMMUsSize}
 };
 
 localparam int unsigned NumSyncRegSlv = gen_num_regbus_sync_slave(CarfieldRegBusCfg);
@@ -276,6 +275,8 @@ function automatic carfield_regbus_slave_idx_t carfield_gen_regbus_slave_idx(reg
   end else begin ret.padframe = NumTotalRegSlv + j; j++; end
   if (regbus_cfg.l2ecc.enable) begin ret.l2ecc = i; i++;
   end else begin ret.l2ecc = NumTotalRegSlv + j; j++; end
+  if (regbus_cfg.iommus.enable) begin ret.iommus = i; i++;
+  end else begin ret.iommus = NumTotalRegSlv + j; j++; end
   return ret;
 endfunction
 
@@ -315,6 +316,12 @@ function automatic regbus_struct_t carfield_gen_regbus_map(int unsigned NumSlave
     ret.RegBusEnd[i] = regbus_cfg.l2ecc.base + regbus_cfg.l2ecc.size;
     if (i < NumSlave - 1) i++;
   end
+  if (regbus_cfg.iommus.enable) begin
+    ret.RegBusIdx[i] = idx.iommus;
+    ret.RegBusStart[i] = regbus_cfg.iommus.base;
+    ret.RegBusEnd[i] = regbus_cfg.iommus.base + regbus_cfg.iommus.size;
+    if (i < NumSlave - 1) i++;
+  end
   return ret;
 endfunction
 
@@ -331,16 +338,17 @@ function automatic int unsigned gen_carfield_domains(islands_cfg_t island_cfg);
 endfunction
 
 localparam islands_cfg_t CarfieldIslandsCfg = '{
-  l2_port0: '{L2Port0Enable, L2Port0Base, L2Port0Size},
-  l2_port1: '{L2Port1Enable, L2Port1Base, L2Port1Size},
-  safed:    '{SafetyIslandEnable, SafetyIslandBase, SafetyIslandSize},
-  ethernet: '{EthernetEnable, EthernetBase, EthernetSize},
-  periph:   '{PeriphEnable, PeriphBase, PeriphSize},
-  spatz:    '{SpatzClusterEnable, SpatzClusterBase, SpatzClusterSize},
-  pulp:     '{PulpClusterEnable, PulpClusterBase, PulpClusterSize},
-  secured:  '{SecurityIslandEnable, SecurityIslandBase, SecurityIslandSize},
-  mbox:     '{MailboxEnable, MailboxBase, MailboxSize},
-  iommu:    '{IOMMUEnable, IOMMUBase, IOMMUSize}
+  l2_port0:    '{L2Port0Enable, L2Port0Base, L2Port0Size},
+  l2_port1:    '{L2Port1Enable, L2Port1Base, L2Port1Size},
+  safed:       '{SafetyIslandEnable, SafetyIslandBase, SafetyIslandSize},
+  safed_iommu: '{SafetyIOMMUEnable, '0, '0}, // AXI master only
+  ethernet:    '{EthernetEnable, EthernetBase, EthernetSize},
+  periph:      '{PeriphEnable, PeriphBase, PeriphSize},
+  spatz:       '{SpatzClusterEnable, SpatzClusterBase, SpatzClusterSize},
+  spatz_iommu: '{SpatzIOMMUEnable, '0, '0}, // AXI master only
+  pulp:        '{PulpClusterEnable, PulpClusterBase, PulpClusterSize},
+  secured:     '{SecurityIslandEnable, SecurityIslandBase, SecurityIslandSize},
+  mbox:        '{MailboxEnable, MailboxBase, MailboxSize}
 };
 
 localparam int unsigned CarfieldAxiNumSlaves  = gen_num_axi_slave(CarfieldIslandsCfg);
@@ -428,15 +436,15 @@ typedef enum byte_bt {
   PeriphsSlvIdx      = CarfieldAxiSlvIdx.periph,
   FPClusterSlvIdx    = CarfieldAxiSlvIdx.spatz,
   IntClusterSlvIdx   = CarfieldAxiSlvIdx.pulp,
-  MailboxSlvIdx      = CarfieldAxiSlvIdx.mbox,
-  IOMMUSlvIdx        = CarfieldAxiSlvIdx.iommu
+  MailboxSlvIdx      = CarfieldAxiSlvIdx.mbox
 } axi_slv_idx_t;
 
 typedef enum byte_bt {
   SafetyIslandMstIdx   = CarfieldMstIdx.safed,
+  SafetyIOMMUMstIdx    = CarfieldMstIdx.safed_iommu,
   SecurityIslandMstIdx = CarfieldMstIdx.secured,
   FPClusterMstIdx      = CarfieldMstIdx.spatz,
-  IOMMUMstIdx          = CarfieldMstIdx.iommu,
+  SpatzIOMMUMstIdx     = CarfieldMstIdx.spatz_iommu,
   IntClusterMstIdx     = CarfieldMstIdx.pulp
 } axi_mst_idx_t;
 

@@ -129,7 +129,7 @@ module snitch_cluster_carfield
   // Merge XBAR (Narrow & Wide from Snitch cluster)
   // ----------------
 
-  localparam int unsigned NrMergeSlaves = 2;
+  localparam int unsigned NrMergeSlaves = 2; // SoC / Bootrom
   localparam int unsigned NrMergeMasters = 2; // Wide / Narrow
   localparam int unsigned MergeIdWidthIn = snitch_cluster_pkg::NarrowIdWidthOut; // (Narrow_out id width)
   localparam int unsigned MergeIdWidthOut = MergeIdWidthIn + $clog2(NrMergeMasters);
@@ -215,8 +215,8 @@ module snitch_cluster_carfield
   assign merge_xbar_rule         = '{
     '{
       idx       : Merge_Rom,
-      start_addr: 'h1000,
-      end_addr  : 'h1000+'h1000
+      start_addr: 'h02000000,
+      end_addr  : 'h02000000+'h10000
     }
   };
 
@@ -266,6 +266,7 @@ module snitch_cluster_carfield
   // We use narrow as wide does not connect to the peripherals
   assign snitch_wide_in_req = '0;
 
+
   snitch_cluster_wrapper i_snitch_cluster_wrapper (
     .clk_i,
     .rst_ni,
@@ -282,6 +283,7 @@ module snitch_cluster_carfield
     .wide_in_req_i           (snitch_wide_in_req   ),
     .wide_in_resp_o          (snitch_wide_in_rsp   )
   );
+
 
   // ----------------
   // ID width, Isolate and CDC
@@ -315,12 +317,12 @@ module snitch_cluster_carfield
     .slv_req_i  ( merge_axi_slv_req[Merge_SoC] ),
     .slv_resp_o ( merge_axi_slv_rsp[Merge_SoC] ),
     .mst_req_o  ( axi_from_cluster_req      ),
-    .mst_resp_i ( axi_from_cluster_rsp     )
+    .mst_resp_i ( axi_from_cluster_rsp      )
    );
 
   axi_iw_converter #(
     .AxiSlvPortIdWidth      ( AxiInIdWidth                           ),
-    .AxiMstPortIdWidth      ( snitch_cluster_pkg::NarrowIdWidthIn      ),
+    .AxiMstPortIdWidth      ( snitch_cluster_pkg::NarrowIdWidthIn    ),
     .AxiSlvPortMaxUniqIds   ( 2                  ),
     .AxiSlvPortMaxTxnsPerId ( 2                  ),
     .AxiSlvPortMaxTxns      ( 4                  ),
@@ -337,7 +339,7 @@ module snitch_cluster_carfield
     .clk_i      ( clk_i                  ),
     .rst_ni     ( rst_ni                 ),
     .slv_req_i  ( axi_to_cluster_req     ),
-    .slv_resp_o ( axi_to_cluster_rsp    ),
+    .slv_resp_o ( axi_to_cluster_rsp     ),
     .mst_req_o  ( snitch_narrow_in_req   ),
     .mst_resp_i ( snitch_narrow_in_rsp   )
   );
@@ -371,9 +373,9 @@ module snitch_cluster_carfield
     .clk_i                ( clk_i                     ),
     .rst_ni               ( rst_ni                    ),
     .slv_req_i            ( axi_from_cluster_req      ),
-    .slv_resp_o           ( axi_from_cluster_rsp     ),
+    .slv_resp_o           ( axi_from_cluster_rsp      ),
     .mst_req_o            ( axi_from_cluster_iso_req  ),
-    .mst_resp_i           ( axi_from_cluster_iso_rsp ),
+    .mst_resp_i           ( axi_from_cluster_iso_rsp  ),
     .isolate_i            ( axi_isolate_sync          ),
     .isolated_o           ( axi_isolated_o            )
   );
@@ -409,19 +411,19 @@ module snitch_cluster_carfield
     .dst_clk_i                  ( clk_i                  ),
     .dst_rst_ni                 ( pwr_on_rst_ni          ),
     .dst_req_o                  ( axi_to_cluster_req     ),
-    .dst_resp_i                 ( axi_to_cluster_rsp    )
+    .dst_resp_i                 ( axi_to_cluster_rsp     )
   );
 
   axi_cdc_src #(
-   .LogDepth   ( LogDepth          ),
-   .SyncStages ( CdcSyncStages     ),
-   .aw_chan_t  ( axi_out_aw_chan_t ),
-   .w_chan_t   ( axi_out_w_chan_t  ),
-   .b_chan_t   ( axi_out_b_chan_t  ),
-   .ar_chan_t  ( axi_out_ar_chan_t ),
-   .r_chan_t   ( axi_out_r_chan_t  ),
-   .axi_req_t  ( axi_out_req_t     ),
-   .axi_resp_t ( axi_out_resp_t    )
+    .LogDepth   ( LogDepth          ),
+    .SyncStages ( CdcSyncStages     ),
+    .aw_chan_t  ( axi_out_aw_chan_t ),
+    .w_chan_t   ( axi_out_w_chan_t  ),
+    .b_chan_t   ( axi_out_b_chan_t  ),
+    .ar_chan_t  ( axi_out_ar_chan_t ),
+    .r_chan_t   ( axi_out_r_chan_t  ),
+    .axi_req_t  ( axi_out_req_t     ),
+    .axi_resp_t ( axi_out_resp_t    )
   ) i_snitch_cluster_cdc_src (
     // Asynchronous Master port
     .async_data_master_aw_data_o( async_axi_out_aw_data_o ),
@@ -441,9 +443,9 @@ module snitch_cluster_carfield
     .async_data_master_r_rptr_o ( async_axi_out_r_rptr_o  ),
     // Synchronous slave port
     .src_clk_i                  ( clk_i                    ),
-    .src_rst_ni                 ( pwr_on_rst_ni          ),
+    .src_rst_ni                 ( pwr_on_rst_ni            ),
     .src_req_i                  ( axi_from_cluster_iso_req ),
-    .src_resp_o                 ( axi_from_cluster_iso_rsp)
+    .src_resp_o                 ( axi_from_cluster_iso_rsp )
   );
 
   // ----------------
@@ -455,53 +457,51 @@ module snitch_cluster_carfield
   reg_dma_req_t bootrom_reg_req;
   reg_dma_rsp_t bootrom_reg_rsp;
 
-  axi_to_reg #(
-    .ADDR_WIDTH         (snitch_cluster_pkg::AddrWidth      ),
-    .DATA_WIDTH         (snitch_cluster_pkg::WideDataWidth      ),
-    .AXI_MAX_WRITE_TXNS (1                 ),
-    .AXI_MAX_READ_TXNS  (1                 ),
-    .DECOUPLE_W         (0                 ),
-    .ID_WIDTH           (MergeIdWidthOut    ),
-    .USER_WIDTH         (snitch_cluster_pkg::WideUserWidth      ),
-    .axi_req_t          (merge_slv_req_t ),
-    .axi_rsp_t          (merge_slv_resp_t),
+  axi_to_reg_v2 #(
+    .AxiAddrWidth       (snitch_cluster_pkg::AddrWidth     ),
+    .AxiDataWidth       (snitch_cluster_pkg::WideDataWidth ),
+    .AxiIdWidth         (MergeIdWidthOut                   ),
+    .AxiUserWidth       (snitch_cluster_pkg::WideUserWidth ),
+    .RegDataWidth       (32),
+    //.CutMemReqs         (1'b1              ),
+    //.CutMemRsps         (1'b1              ),
+    .axi_req_t          (merge_slv_req_t   ),
+    .axi_rsp_t          (merge_slv_resp_t  ),
     .reg_req_t          (reg_dma_req_t     ),
     .reg_rsp_t          (reg_dma_rsp_t     )
   ) i_axi_to_reg_bootrom (
     .clk_i      (clk_i                    ),
     .rst_ni     (rst_ni                   ),
-    .testmode_i (1'b0                     ),
     .axi_req_i  (merge_axi_slv_req[Merge_Rom]),
     .axi_rsp_o  (merge_axi_slv_rsp[Merge_Rom]),
     .reg_req_o  (bootrom_reg_req          ),
-    .reg_rsp_i  (bootrom_reg_rsp          )
+    .reg_rsp_i  (bootrom_reg_rsp          ),
+    .busy_o     ( )
   );
 
-  snitch_cluster_bootrom i_bootrom (
+  snitch_cluster_bootrom #(
+    .AddrWidth (snitch_cluster_pkg::AddrWidth     ),
+    .DataWidth (32)
+  ) i_bootrom (
     .clk_i  (clk_i                        ),
     .req_i  (bootrom_reg_req.valid        ),
     .addr_i (snitch_cluster_pkg::addr_t'(bootrom_reg_req.addr)),
-    .rdata_o(bootrom_reg_rsp.rdata        )
+    .data_o(bootrom_reg_rsp.rdata        )
   );
   `FF(bootrom_reg_rsp.ready, bootrom_reg_req.valid, 1'b0)
   assign bootrom_reg_rsp.error = 1'b0;
-
-  // pragma translate_off
-  `ifndef VERILATOR
-  `ifndef XSIM
-  initial begin : check_params
-    narrow_wide_dw: assert (snitch_cluster_pkg::NarrowDataWidth == snitch_cluster_pkg::WideDataWidth) else
-      $fatal(1, $sformatf("Slv_req and aw_chan id width not equal."));
-  end
-  `endif
-  `endif
-  // pragma translate_on
 
   generate
   if ( AxiDataWidth != snitch_cluster_pkg::WideDataWidth ||
        AxiAddrWidth != snitch_cluster_pkg::AddrWidth     ||
        AxiUserWidth  < snitch_cluster_pkg::WideUserWidth    ) begin
-      $error("%m ** SoC and wide must be the same size");
+    $fatal(1, "%m ** SoC and wide must be the same size");
+  end
+  if ( snitch_cluster_pkg::NarrowDataWidth != snitch_cluster_pkg::WideDataWidth ) begin
+    $fatal(1, "%m ** Narrow and wide (DMA) must be the same size");
+  end
+  if ( snitch_cluster_pkg::NarrowIdWidthOut < snitch_cluster_pkg::WideIdWidthOut) begin
+    $fatal(1, "%m ** Narrow id must be larger than wide id for proper merging.");
   end
   endgenerate
 

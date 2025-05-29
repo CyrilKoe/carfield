@@ -282,7 +282,7 @@ packages:
     dependencies:
     - tech_cells_generic
   hyperbus:
-    revision: 7c1db76788ef1db05d893fea2b9c1ceb30d3f081
+    revision: 2a14bd8f9a985b488ee23d240764f52f129f7729
     version: 0.0.8
     source:
       Git: https://github.com/pulp-platform/hyperbus.git
@@ -508,10 +508,10 @@ packages:
     - common_cells
     - register_interface
   snitch_cluster:
-    revision: 269830af872fa943d8b079470120d42d62e1cb69
+    revision: 23d194dd6ac576a6a36abb588e4b269affbc64f8
     version: null
     source:
-      Git: https://github.com/pulp-platform/snitch_cluster.git
+      Git: https://github.com/cyrilkoe/snitch_cluster.git
     dependencies:
     - axi
     - axi_riscv_atomics

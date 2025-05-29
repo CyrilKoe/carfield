@@ -327,6 +327,11 @@ void prepare_snitchd_boot () {
 	// Write entry point into boot address
 	volatile uintptr_t bootaddr_addr = (uintptr_t)(CAR_FP_CLUSTER_SPM_BASE_ADDR(car_spatz_cluster) + 0x0);
 	writew(0x78000000, bootaddr_addr);
+	fence();
+
+	// Set EOC at zero
+	volatile uintptr_t status_addr = (uintptr_t)(CAR_FP_CLUSTER_SPM_BASE_ADDR(car_spatz_cluster) + 0x8);
+	writew(status_addr, 0);
 
 	// Send IRQ
 	volatile uintptr_t cluster_clint_addr = (uintptr_t)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x180);
@@ -336,10 +341,10 @@ void prepare_snitchd_boot () {
 uint32_t poll_snitchd_corestatus () {
 	volatile int a = 0;
 	while(true) {
-		volatile uintptr_t status_addr = (uintptr_t)(CAR_FP_CLUSTER_SPM_BASE_ADDR(car_spatz_cluster) + 0x4);
+		volatile uintptr_t status_addr = (uintptr_t)(CAR_FP_CLUSTER_SPM_BASE_ADDR(car_spatz_cluster) + 0x8);
 		// TODO: Add a timeut to not poll indefinitely
 		a++;
-		if (((uint32_t)readw(status_addr)) == 0xffffffff)
+		if (((uint32_t)readw(status_addr)) != 0x0)
 		    break;
 		fence();
 		for(int i = 0; i < 128; i++)
@@ -373,9 +378,6 @@ uint32_t snitchd_offloader_blocking () {
 
 	uint32_t ret = 0;
 
-	volatile uintptr_t bootaddr_addr = (uintptr_t)(CAR_FP_CLUSTER_SPM_BASE_ADDR(car_spatz_cluster) + 0x0);
-	writew(0x78000000, bootaddr_addr);
-
 	// Load binary payload
 	load_binary();
 
@@ -383,9 +385,13 @@ uint32_t snitchd_offloader_blocking () {
 
 	*((uint32_t*) 0x2001010c) = 400;
 	*((uint32_t*) 0x20010104) = 400;
-	*((uint32_t*) 0x3001000) = 0;
-	*((uint32_t*) 0x3001014) = 1;
-	*((uint32_t*) 0x3001010) = 1;
+
+	//writew(0x1ff,(uint32_t*)(CAR_FP_CLUSTER_PERIPHS_BASE_ADDR(car_spatz_cluster) + 0x180));
+
+	// Enable LLC (?)
+	// *((uint32_t*) 0x3001000) = 0;
+	// *((uint32_t*) 0x3001014) = 1;
+	// *((uint32_t*) 0x3001010) = 1;
 
 	// Select bootmode, write entry point, write launch signal
 	prepare_snitchd_boot();
