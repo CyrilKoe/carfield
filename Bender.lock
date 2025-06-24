@@ -436,8 +436,8 @@ packages:
     - register_interface
     - tech_cells_generic
   register_interface:
-    revision: d7693be4aef1fc7e7eb2b00b41c42e87d959866c
-    version: 0.4.2
+    revision: 5daa85d164cf6b54ad061ea1e4c6f3624556e467
+    version: 0.4.5
     source:
       Git: https://github.com/pulp-platform/register_interface.git
     dependencies:
@@ -462,7 +462,7 @@ packages:
     - common_cells
     - tech_cells_generic
   riscv-iommu:
-    revision: 4897be154f5e12e14d5a85bb8d94b1bbf5755b84
+    revision: 2e4c2d834f8cf9fa28fe95fe35f86f562a2d7526
     version: null
     source:
       Git: https://github.com/cyrilkoe/riscv-iommu.git

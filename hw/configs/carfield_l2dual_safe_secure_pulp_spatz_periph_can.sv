@@ -65,17 +65,13 @@ localparam doub_bt SystemWatchdogSize = 'h00001000;
 // Hyperbus Config
 localparam doub_bt HyperBusBase = 'h20009000;
 localparam doub_bt HyperBusSize = 'h00001000;
-// IOMMU Config
-localparam bit     IOMMUEnable = 1;
-localparam doub_bt IOMMUBase = 'h2000A000;
-localparam doub_bt IOMMUSize = 'h00001000;
 /************************
  * IOMMUs Configuration *
  ***********************/
 // IOMMUs configuration interface are multiplexed
 // from regbus at IOMMUsBase
 // Spatz IOMMU Config
-localparam bit     SpatzIOMMUEnable = 0;
+localparam bit     SpatzIOMMUEnable = 1;
 localparam doub_bt SpatzIOMMUOff = 'h0000;
 localparam doub_bt SpatzIOMMUSize = 'h1000;
 // Safety IOMMU Config

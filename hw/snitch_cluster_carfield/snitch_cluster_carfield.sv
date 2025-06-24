@@ -80,11 +80,11 @@ module snitch_cluster_carfield
 )(
   input  logic                clk_i,
   input  logic                rst_ni,
-  input  logic [9-1:0] debug_req_i,
+  input  logic [snitch_cluster_pkg::NrCores-1:0] debug_req_i,
 
-  input  logic [9-1:0] meip_i,
-  input  logic [9-1:0] mtip_i,
-  input  logic [9-1:0] msip_i,
+  input  logic [snitch_cluster_pkg::NrCores-1:0] meip_i,
+  input  logic [snitch_cluster_pkg::NrCores-1:0] mtip_i,
+  input  logic [snitch_cluster_pkg::NrCores-1:0] msip_i,
   output logic                          cluster_probe_o,
   input  logic axi_isolate_i,
   output logic axi_isolated_o,
@@ -452,10 +452,10 @@ module snitch_cluster_carfield
   // Bootrom
   // ----------------
 
-  `REG_BUS_TYPEDEF_ALL(reg_dma, snitch_cluster_pkg::addr_t, snitch_cluster_pkg::data_dma_t, snitch_cluster_pkg::strb_dma_t)
+  `REG_BUS_TYPEDEF_ALL(reg_bootrom, snitch_cluster_pkg::addr_t, logic[31:0], logic[3:0])
 
-  reg_dma_req_t bootrom_reg_req;
-  reg_dma_rsp_t bootrom_reg_rsp;
+  reg_bootrom_req_t bootrom_reg_req;
+  reg_bootrom_rsp_t bootrom_reg_rsp;
 
   axi_to_reg_v2 #(
     .AxiAddrWidth       (snitch_cluster_pkg::AddrWidth     ),
@@ -467,8 +467,8 @@ module snitch_cluster_carfield
     //.CutMemRsps         (1'b1              ),
     .axi_req_t          (merge_slv_req_t   ),
     .axi_rsp_t          (merge_slv_resp_t  ),
-    .reg_req_t          (reg_dma_req_t     ),
-    .reg_rsp_t          (reg_dma_rsp_t     )
+    .reg_req_t          (reg_bootrom_req_t ),
+    .reg_rsp_t          (reg_bootrom_rsp_t )
   ) i_axi_to_reg_bootrom (
     .clk_i      (clk_i                    ),
     .rst_ni     (rst_ni                   ),
