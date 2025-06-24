@@ -110,6 +110,9 @@ SPATZD_MAKEDIR  := $(SPATZD_ROOT)/hw/system/spatz_cluster
 SPATZD_BINARY   ?=
 SPATZD_BOOTMODE ?= 0 # default jtag bootmode
 
+# Snitch cluster
+SNITCHD_ROOT    ?= $(shell $(BENDER) path snitch_cluster)
+
 ###########################
 # System HW configuration #
 ###########################
@@ -216,7 +219,7 @@ pulpd-sw-build: pulpd-sw-init
 ## Initialize Carfield HW. This step takes care of the generation of the missing hardware or the
 ## update of default HW configurations in some of the domains. See the two prerequisite's comment
 ## for more information.
-car-hw-init: spatzd-hw-init chs-hw-init
+car-hw-init: chs-hw-init snitchd-hw-init
 
 ## @section Carfield platform PCRs generation
 .PHONY: regenerate_soc_regs
@@ -264,7 +267,10 @@ update_serial_link: $(CHS_ROOT)/hw/serial_link.hjson
 spatzd-hw-init: | venv
 	$(MAKE) -C $(SPATZD_ROOT) hw/ip/snitch/src/riscv_instr.sv
 	$(MAKE) -C $(SPATZD_MAKEDIR) -B SPATZ_CLUSTER_CFG=$(SPATZD_MAKEDIR)/cfg/carfield.hjson bootrom
-	cp  $(SPATZD_ROOT)/sw/snRuntime/include/spatz_cluster_peripheral.h  $(CAR_SW_DIR)/include/regs/
+	cp $(SPATZD_ROOT)/sw/snRuntime/include/spatz_cluster_peripheral.h  $(CAR_SW_DIR)/include/regs/
+
+# Generate Snitch HW
+include $(CAR_HW_DIR)/snitch_cluster_carfield/snitch_cluster_carfield.mk
 
 ## Generate Cheshire HW. This target has a prerequisite, i.e. the PLIC and serial link
 ## configurations must be chosen before generating the hardware.

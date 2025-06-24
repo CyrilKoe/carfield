@@ -21,7 +21,7 @@ car-sw-all: car-sw-libs car-sw-tests
 
 # Libraries
 CAR_PULPD_BARE    ?= $(CAR_SW_DIR)/tests/bare-metal/pulpd
-CAR_SW_INCLUDES    = -I$(CAR_SW_DIR)/include -I$(CAR_SW_DIR)/tests/bare-metal/safed -I$(CAR_PULPD_BARE) -I$(CHS_SW_DIR)/include $(CHS_SW_DEPS_INCS)
+CAR_SW_INCLUDES    = -I$(CAR_SW_DIR)/include -I$(CAR_SW_DIR)/tests/bare-metal/safed -I$(CAR_SW_DIR)/tests/bare-metal/snitchd -I$(CAR_PULPD_BARE) -I$(CHS_SW_DIR)/include $(CHS_SW_DEPS_INCS)
 CAR_SW_LIB_SRCS_S  = $(wildcard $(CAR_SW_DIR)/lib/*.S $(CAR_SW_DIR)/lib/**/*.S)
 CAR_SW_LIB_SRCS_C  = $(wildcard $(CAR_SW_DIR)/lib/*.c $(CAR_SW_DIR)/lib/**/*.c)
 CAR_SW_LIB_SRCS_O  = $(CAR_SW_DEPS_SRCS:.c=.o) $(CAR_SW_LIB_SRCS_S:.S=.o) $(CAR_SW_LIB_SRCS_C:.c=.o)
@@ -62,13 +62,15 @@ CAR_ELFLOAD_BLOCKING_PULPD_SRC_C := $(CAR_SW_DIR)/tests/bare-metal/hostd/pulpd_o
 CAR_ELFLOAD_BLOCKING_PULPD_PATH := $(basename $(CAR_ELFLOAD_BLOCKING_PULPD_SRC_C))
 CAR_ELFLOAD_PULPD_INTF_SRC_C := $(CAR_SW_DIR)/tests/bare-metal/hostd/pulp-offload-intf.c
 CAR_ELFLOAD_PULPD_INTF_PATH := $(basename $(CAR_ELFLOAD_PULPD_INTF_SRC_C))
+CAR_ELFLOAD_BLOCKING_SNITCHD_SRC_C := $(CAR_SW_DIR)/tests/bare-metal/hostd/snitchd_offloader_blocking.c
+CAR_ELFLOAD_BLOCKING_SNITCHD_PATH := $(basename $(CAR_ELFLOAD_BLOCKING_SNITCHD_SRC_C))
 
 CAR_SW_TEST_SRCS_S	= $(wildcard $(CAR_SW_DIR)/tests/bare-metal/hostd/*.S)
-CAR_SW_TEST_SRCS_C	= $(filter-out $(CAR_ELFLOAD_BLOCKING_SAFED_SRC_C) $(CAR_ELFLOAD_BLOCKING_PULPD_SRC_C) $(CAR_ELFLOAD_PULPD_INTF_SRC_C), $(wildcard $(CAR_SW_DIR)/tests/bare-metal/hostd/*.c))
+CAR_SW_TEST_SRCS_C	= $(filter-out $(CAR_ELFLOAD_BLOCKING_SNITCHD_SRC_C) $(CAR_ELFLOAD_BLOCKING_SAFED_SRC_C) $(CAR_ELFLOAD_BLOCKING_PULPD_SRC_C) $(CAR_ELFLOAD_PULPD_INTF_SRC_C), $(wildcard $(CAR_SW_DIR)/tests/bare-metal/hostd/*.c))
 
 CAR_SW_TEST_SRC_EXCLUDE_DRAM =
 CAR_SW_TEST_SRC_EXCLUDE_SPM = llc_test.c
-CAR_SW_TEST_SRC_EXCLUDE_L2 = llc_test.c
+CAR_SW_TEST_SRC_EXCLUDE_L2 = llc_test.c $(CAR_ELFLOAD_BLOCKING_SNITCHD_SRC_C)
 
 CAR_SW_TEST_DRAM_DUMP	= $(CAR_SW_TEST_SRCS_S:.S=.car.dram.dump) $(filter-out $(CAR_SW_TEST_SRC_EXCLUDE_DRAM),$(CAR_SW_TEST_SRCS_C:.c=.car.dram.dump))
 CAR_SW_TEST_DRAM_SLM	= $(CAR_SW_TEST_SRCS_S:.S=.car.dram.slm)  $(filter-out $(CAR_SW_TEST_SRC_EXCLUDE_DRAM),$(CAR_SW_TEST_SRCS_C:.c=.car.dram.slm))
@@ -89,14 +91,25 @@ define offload_tests_template
 	$(foreach header,$(1), \
 		cp $(header) $(CAR_SW_DIR)/tests/bare-metal/$(2)/payload.h; \
 		$(CHS_SW_CC) $(CAR_SW_INCLUDES) $(CHS_SW_CCFLAGS) -c $(3) -o $(4).$(basename $(notdir $(header))).car.o; \
-		$(CHS_SW_CC) $(CAR_SW_INCLUDES) -T$(CAR_LD_DIR)/l2.ld $(CAR_SW_LDFLAGS) -o $(4).$(basename $(notdir $(header))).car.l2.elf  $(4).$(basename $(notdir $(header))).car.o $(CHS_SW_LIBS) $(CAR_SW_LIBS); \
-		$(CHS_SW_OBJDUMP) -d -S $(4).$(basename $(notdir $(header))).car.l2.elf > $(4).$(basename $(notdir $(header))).car.l2.dump; \
-		$(CHS_SW_CC) $(CAR_SW_INCLUDES) -T$(CHS_LD_DIR)/dram.ld $(CAR_SW_LDFLAGS) -o $(4).$(basename $(notdir $(header))).car.dram.elf  $(4).$(basename $(notdir $(header))).car.o $(CHS_SW_LIBS) $(CAR_SW_LIBS); \
-		$(CHS_SW_OBJDUMP) -d -S $(4).$(basename $(notdir $(header))).car.dram.elf > $(4).$(basename $(notdir $(header))).car.dram.dump; \
+		if [ "$(filter $3,$(CAR_SW_TEST_SRC_EXCLUDE_L2))" == "" ]; then \
+		  $(CHS_SW_CC) $(CAR_SW_INCLUDES) -T$(CAR_LD_DIR)/l2.ld $(CAR_SW_LDFLAGS) -o $(4).$(basename $(notdir $(header))).car.l2.elf $(4).$(basename $(notdir $(header))).car.o $(CHS_SW_LIBS) $(CAR_SW_LIBS); \
+		  $(CHS_SW_OBJDUMP) -d -S $(4).$(basename $(notdir $(header))).car.l2.elf > $(4).$(basename $(notdir $(header))).car.l2.dump; \
+		fi; \
+		if [ "$(filter $3,$(CAR_SW_TEST_SRC_EXCLUDE_DRAM))" == "" ]; then \
+		  $(CHS_SW_CC) $(CAR_SW_INCLUDES) -T$(CHS_LD_DIR)/dram.ld $(CAR_SW_LDFLAGS) -o $(4).$(basename $(notdir $(header))).car.dram.elf  $(4).$(basename $(notdir $(header))).car.o $(CHS_SW_LIBS) $(CAR_SW_LIBS); \
+		  $(CHS_SW_OBJDUMP) -d -S $(4).$(basename $(notdir $(header))).car.dram.elf > $(4).$(basename $(notdir $(header))).car.dram.dump; \
+		fi; \
 		$(RM) $(CAR_SW_DIR)/tests/bare-metal/$(2)/payload.h; \
 		$(RM) $(4).$(basename $(notdir $(header))).car.o; \
 	)
 endef
+
+# Snitch offload tests
+include $(CAR_SW_DIR)/tests/bare-metal/snitchd/sw.mk
+
+car-snitchd-sw-offload-tests: $(SNITCHD_HEADER_TARGETS)
+	echo $(SNITCHD_HEADER_TARGETS)
+	$(call offload_tests_template,$(SNITCHD_HEADER_TARGETS),snitchd,$(CAR_ELFLOAD_BLOCKING_SNITCHD_SRC_C),$(CAR_ELFLOAD_BLOCKING_SNITCHD_PATH))
 
 # Safety Island offload tests
 include $(CAR_SW_DIR)/tests/bare-metal/safed/sw.mk
