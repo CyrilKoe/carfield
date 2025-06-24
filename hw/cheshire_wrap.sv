@@ -12,7 +12,6 @@
  `include "axi/assign.svh"
 
 module cheshire_wrap
-  import axi_pkg::*;
   import carfield_pkg::*;
   import cheshire_pkg::*;
 #(
@@ -243,10 +242,10 @@ module cheshire_wrap
   output logic [Cfg.VgaGreenWidth-1:0] vga_green_o,
   output logic [Cfg.VgaBlueWidth -1:0] vga_blue_o,
   input  logic                  [31:0] aw_delay_i,
-  input  logic                   [31:0] w_delay_i,
-  input  logic                   [31:0] b_delay_i,
+  input  logic                  [31:0] w_delay_i,
+  input  logic                  [31:0] b_delay_i,
   input  logic                  [31:0] ar_delay_i,
-  input  logic                   [31:0] r_delay_i
+  input  logic                  [31:0] r_delay_i
 );
 
 // All AXI slave buses
@@ -493,11 +492,11 @@ end
 ) i_axi_fifo_delay (
   .clk_i,
   .rst_ni,
-  .aw_delay_i (aw_delay_i),
-  .w_delay_i  (w_delay_i ),
-  .b_delay_i  (b_delay_i ),
-  .ar_delay_i (ar_delay_i),
-  .r_delay_i  (r_delay_i ),
+  .aw_delay_i (aw_delay_i[16:0] ),
+  .w_delay_i  (w_delay_i[16:0]  ),
+  .b_delay_i  (b_delay_i[16:0]  ),
+  .ar_delay_i (ar_delay_i[16:0] ),
+  .r_delay_i  (r_delay_i[16:0]  ),
   .slv_req_i  (axi_llc_mst_req),
   .slv_resp_o (axi_llc_mst_rsp),
   .mst_req_o  (axi_llc_delayed_mst_req),
@@ -598,13 +597,27 @@ for (genvar i = 0; i < Cfg.AxiExtNumMst; i++) begin: gen_ext_mst_iommu_bypass
   end
 end
 
+
 generate
-  if( carfield_configuration::SpatzIOMMUEnable ) begin
+  if( carfield_configuration::SpatzIOMMUEnable ) begin: gen_spatz_iommu
     // Reg to AXI for IOMMU config
-    //ext_reg_rsp
-    //ext_reg_resp
     cheshire_axi_ext_slv_req_t spatz_iommu_prog_req;
     cheshire_axi_ext_slv_rsp_t spatz_iommu_prog_rsp;
+    localparam int unsigned IommusIdx = CarfieldRegBusSlvIdx.iommus;
+    reg_to_axi #(
+      .DataWidth(Cfg.AxiDataWidth),
+      .reg_req_t(cheshire_reg_ext_req_t),
+      .reg_rsp_t(cheshire_reg_ext_rsp_t),
+      .axi_req_t(cheshire_axi_ext_slv_req_t),
+      .axi_rsp_t(cheshire_axi_ext_slv_rsp_t)
+    ) iommus_reg_to_axi (
+      .clk_i(clk_i),
+      .rst_ni(rst_ni),
+      .reg_rsp_o(ext_reg_rsp[IommusIdx]),
+      .reg_req_i(ext_reg_req[IommusIdx]),
+      .axi_req_o(spatz_iommu_prog_req),
+      .axi_rsp_i(spatz_iommu_prog_rsp)
+    );
 
     `CARFIELD_TYPEDEF_IOMMU(axi_iommu, Cfg);
 
@@ -630,7 +643,7 @@ generate
       .ADDR_WIDTH			  ( Cfg.AddrWidth                   ),
       .DATA_WIDTH			  ( Cfg.AxiDataWidth                ),
       .ID_WIDTH			    ( Cfg.AxiMstIdWidth               ),
-      .ID_SLV_WIDTH		  ( Cfg.AxiMstIdWidth               ),
+      .ID_SLV_WIDTH		  ( ExtSlvIdWidth                   ),
       .USER_WIDTH			  ( Cfg.AxiUserWidth                ),
       .aw_chan_t			  ( cheshire_axi_ext_mst_aw_chan_t  ),
       .w_chan_t			    ( cheshire_axi_ext_mst_w_chan_t   ),
@@ -657,11 +670,12 @@ generate
       .ds_resp_i			  ( axi_ext_mst_pre_mmu_rsp[SpatzIOMMUMstIdx]),
       .ds_req_o			    ( axi_ext_mst_pre_mmu_req[SpatzIOMMUMstIdx]),
       // Programming Interface (Slave) (AXI4 Full -> AXI4-Lite -> Reg IF)
-      .prog_req_i			  ( /* Todo */ ),
-      .prog_resp_o		  ( /* Todo */ ),
+      .prog_req_i			  ( spatz_iommu_prog_req ),
+      .prog_resp_o		  ( spatz_iommu_prog_rsp ),
       .wsi_wires_o 		  ( intr_iommu                           )
     );
   end
 endgenerate
+
 
 endmodule: cheshire_wrap

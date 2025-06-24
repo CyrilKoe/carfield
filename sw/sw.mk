@@ -29,16 +29,27 @@ CAR_SW_LIB_SRCS_S  = $(wildcard $(CAR_SW_DIR)/lib/*.S $(CAR_SW_DIR)/lib/**/*.S)
 CAR_SW_LIB_SRCS_C  = $(wildcard $(CAR_SW_DIR)/lib/*.c $(CAR_SW_DIR)/lib/**/*.c)
 CAR_SW_LIB_SRCS_O  = $(CAR_SW_DEPS_SRCS:.c=.o) $(CAR_SW_LIB_SRCS_S:.S=.o) $(CAR_SW_LIB_SRCS_C:.c=.o)
 
+CHS_SW_DEPS_INCS := $(CAR_SW_INCLUDES)
+
+# Carfield library
 CAR_SW_LIBS = $(CAR_SW_DIR)/lib/libcarfield.a
 
 $(CAR_SW_DIR)/lib/libcarfield.a: $(CAR_SW_LIB_SRCS_O)
 	$(CHS_SW_AR) $(CHS_SW_ARFLAGS) -rcsv $@ $^
 
+# IOMMU test library
+#CAR_IOMMU_TEST_DIR = $(CAR_SW_DIR)/deps/riscv-iommu-tests
+#CAR_SW_LIBS += $(CAR_IOMMU_TEST_DIR)/build/cva6/rv_iommu_test.a
+#CAR_SW_INCLUDES += -I$(CAR_IOMMU_TEST_DIR)/src/inc
+
+#$(CAR_IOMMU_TEST_DIR)/build/cva6/rv_iommu_test.a:
+#	make -C $(CAR_IOMMU_TEST_DIR) PLAT=cva6 MABI=lp64d MARCH=rv64g_zicsr build/cva6/rv_iommu_test.a
+
 car-sw-libs: $(CAR_SW_LIBS)
 
 # Compilation
 carfield_%.dtb: carfield_%.dts $(wildcard $(CAR_SW_DIR)/boot/*.dtsi)
-	$(CHS_SW_DTC) -@ -I dts -O dtb -i $(CAR_SW_DIR)/boot -o $@ $<
+	$(CHS_SW_DTC) -@ -I dts -O dtb -i $(CAR_SW_DIR)/boot -o $@ $<	
 
 # All objects require up-to-date patches and headers
 %.car.o: %.c

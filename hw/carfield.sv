@@ -659,17 +659,22 @@ assign debug_signals_o.host_pwr_on_rst_n = host_pwr_on_rst_n;
 
 // Cut synchronous register interface
 for (genvar i=0; i<NumSyncRegSlv; i++ ) begin : gen_chs_ext_reg_cut
-  reg_cut #(
-    .req_t ( carfield_reg_req_t ),
-    .rsp_t ( carfield_reg_rsp_t )
-  ) i_chs_sync_ext_reg_cut (
-    .clk_i     ( host_clk_i ),
-    .rst_ni    ( host_pwr_on_rst_n ),
-    .src_req_i ( ext_reg_req ),
-    .src_rsp_o ( ext_reg_rsp ),
-    .dst_req_o ( ext_reg_req_cut ),
-    .dst_rsp_i ( ext_reg_rsp_cut )
-  );
+  // IOMMMUs are instanciated in this module
+  if (i == CarfieldRegBusSlvIdx.iommus && CarfieldRegBusCfg.iommus.enable) begin
+    ;
+  end else begin
+    reg_cut #(
+      .req_t ( carfield_reg_req_t ),
+      .rsp_t ( carfield_reg_rsp_t )
+    ) i_chs_sync_ext_reg_cut (
+      .clk_i     ( host_clk_i ),
+      .rst_ni    ( host_pwr_on_rst_n ),
+      .src_req_i ( ext_reg_req[i] ),
+      .src_rsp_o ( ext_reg_rsp[i] ),
+      .dst_req_o ( ext_reg_req_cut[i] ),
+      .dst_rsp_i ( ext_reg_rsp_cut[i] )
+    );
+  end
 end
 
 // Passsing the `ext_reg_req_cut[CarfieldRegBusSlvIdx.pcrs]` value to the
@@ -722,17 +727,17 @@ logic                           l2_ecc_err;
 // module, before or inside the interrupt controller.
 assign chs_ext_intrs  = {
   // tie unused to 0
-  {(CarfieldNumExtIntrs-23){1'b0}},
+  {(CarfieldNumExtIntrs-27){1'b0}},
   // System peripherals
   car_periph_intrs,        // 17
   // L2 ECC
   l2_ecc_err,              // 1
   // Mailboxes
-  secd_hostd_mbox_intr,    // 1
-  safed_hostd_mbox_intr,   // 1
-  spatzcl_hostd_mbox_intr, // 1
-  pulpcl_hostd_mbox_intr,  // 1
-  pulpcl_eoc               // from integer cluster
+  secd_hostd_mbox_intr,    // 2
+  safed_hostd_mbox_intr,   // 2
+  spatzcl_hostd_mbox_intr, // 2
+  pulpcl_hostd_mbox_intr,  // 2
+  pulpcl_eoc               // 1 (from integer cluster)
 };
 
 `ifndef CHS_NETLIST

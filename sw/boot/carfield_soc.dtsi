@@ -156,9 +156,9 @@
       reg = <0x0 0x51000000 0x0 0x800000>;
       iommus = <&riscv_iommu>;
     };
-    riscv_iommu: iommu@2000a000 {
+    riscv_iommu: iommu@20030000 {
       compatible = "riscv,iommu";
-      reg = <0x0 0x2000a000 0x0 0x00001000>;
+      reg = <0x0 0x20030000 0x0 0x00001000>;
       // Note that IOMMU IRQs are re-routed by the driver
       interrupts = <83 82 84>;
       interrupt-names = "cmdq", "fltq", "hpm";

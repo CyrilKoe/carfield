@@ -236,7 +236,7 @@ typedef struct packed {
 function automatic int unsigned gen_num_regbus_sync_slave(regbus_cfg_t regbus_cfg);
   int unsigned ret = 0; // Number of slaves starts from 0
   if (regbus_cfg.pcrs.enable) begin ret++; end
-  // iommus
+  if (regbus_cfg.iommus.enable) begin ret++; end
   return ret;
 endfunction
 
@@ -249,11 +249,13 @@ function automatic int unsigned gen_num_regbus_async_slave(regbus_cfg_t regbus_c
 endfunction
 
 localparam regbus_cfg_t CarfieldRegBusCfg = '{
+  // Sync
   pcrs:     '{1, PcrsBase, PcrsSize},
+  iommus:   '{IOMMUsEnable, IOMMUsBase, IOMMUsSize},
+  // Async
   pll:      '{PllCfgEnable, PllCfgBase, PllCfgSize},
   padframe: '{PadframeCfgEnable, PadframeCfgBase, PadframeCfgSize},
-  l2ecc:    '{L2EccCfgEnable, L2EccCfgBase, L2EccCfgSize},
-  iommus:   '{IOMMUsEnable, IOMMUsBase, IOMMUsSize}
+  l2ecc:    '{L2EccCfgEnable, L2EccCfgBase, L2EccCfgSize}
 };
 
 localparam int unsigned NumSyncRegSlv = gen_num_regbus_sync_slave(CarfieldRegBusCfg);
@@ -267,16 +269,18 @@ function automatic carfield_regbus_slave_idx_t carfield_gen_regbus_slave_idx(reg
   carfield_regbus_slave_idx_t ret = '{default: '0}; // Initialize struct first
   byte_bt i = 0;
   byte_bt j = 0;
+  // Sync
   if (regbus_cfg.pcrs.enable) begin ret.pcrs = i; i++;
   end else begin ret.pcrs = NumTotalRegSlv + j; j++; end
+  if (regbus_cfg.iommus.enable) begin ret.iommus = i; i++;
+  end else begin ret.iommus = NumTotalRegSlv + j; j++; end
+  // Async
   if (regbus_cfg.pll.enable) begin ret.pll = i; i++;
   end else begin ret.pll = NumTotalRegSlv + j; j++; end
   if (regbus_cfg.padframe.enable) begin ret.padframe = i; i++;
   end else begin ret.padframe = NumTotalRegSlv + j; j++; end
   if (regbus_cfg.l2ecc.enable) begin ret.l2ecc = i; i++;
   end else begin ret.l2ecc = NumTotalRegSlv + j; j++; end
-  if (regbus_cfg.iommus.enable) begin ret.iommus = i; i++;
-  end else begin ret.iommus = NumTotalRegSlv + j; j++; end
   return ret;
 endfunction
 
@@ -292,12 +296,20 @@ function automatic regbus_struct_t carfield_gen_regbus_map(int unsigned NumSlave
                                                            carfield_regbus_slave_idx_t idx);
   regbus_struct_t ret = '0; // Initialize the map first
   int unsigned i = 0;
+  // Sync
   if (regbus_cfg.pcrs.enable) begin
     ret.RegBusIdx[i] = idx.pcrs;
     ret.RegBusStart[i] = regbus_cfg.pcrs.base;
     ret.RegBusEnd[i] = regbus_cfg.pcrs.base + regbus_cfg.pcrs.size;
     if (i < NumSlave - 1) i++;
   end
+  if (regbus_cfg.iommus.enable) begin
+    ret.RegBusIdx[i] = idx.iommus;
+    ret.RegBusStart[i] = regbus_cfg.iommus.base;
+    ret.RegBusEnd[i] = regbus_cfg.iommus.base + regbus_cfg.iommus.size;
+    if (i < NumSlave - 1) i++;
+  end
+  // Async
   if (regbus_cfg.pll.enable) begin
     ret.RegBusIdx[i] = idx.pll;
     ret.RegBusStart[i] = regbus_cfg.pll.base;
@@ -314,12 +326,6 @@ function automatic regbus_struct_t carfield_gen_regbus_map(int unsigned NumSlave
     ret.RegBusIdx[i] = idx.l2ecc;
     ret.RegBusStart[i] = regbus_cfg.l2ecc.base;
     ret.RegBusEnd[i] = regbus_cfg.l2ecc.base + regbus_cfg.l2ecc.size;
-    if (i < NumSlave - 1) i++;
-  end
-  if (regbus_cfg.iommus.enable) begin
-    ret.RegBusIdx[i] = idx.iommus;
-    ret.RegBusStart[i] = regbus_cfg.iommus.base;
-    ret.RegBusEnd[i] = regbus_cfg.iommus.base + regbus_cfg.iommus.size;
     if (i < NumSlave - 1) i++;
   end
   return ret;
