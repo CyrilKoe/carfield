@@ -54,7 +54,7 @@ endif
 
 .PHONY: $(CAR_VSIM_DIR)/compile.carfield_soc.tcl
 $(CAR_VSIM_DIR)/compile.carfield_soc.tcl:
-	$(BENDER) script vsim $(common_targs) $(sim_targs) $(common_defs) $(safed_defs) --vlog-arg="$(RUNTIME_DEFINES)" --compilation-mode separate > $@
+	$(BENDER) script vsim $(common_targs) $(sim_targs) $(common_defs) $(safed_defs) --vlog-arg="$(RUNTIME_DEFINES) -suppress 2583" --compilation-mode separate > $@
 	echo 'vlog "$(CHS_ROOT)/target/sim/src/elfloader.cpp" -ccflags "-std=c++11"' >> $@
 	echo 'vopt $(VOPT_FLAGS) $(TBENCH) -o $(TBENCH)_opt' >> $@
 
