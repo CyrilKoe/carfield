@@ -63,6 +63,19 @@ localparam doub_bt SystemWatchdogSize = 'h00001000;
 localparam doub_bt HyperBusBase = 'h20009000;
 localparam doub_bt HyperBusSize = 'h00001000;
 /************************
+ * IOMMUs Configuration *
+ ***********************/
+// IOMMUs configuration interface are multiplexed
+// from regbus at IOMMUsBase
+// Spatz IOMMU Config
+localparam bit     SpatzIOMMUEnable = 0;
+localparam doub_bt SpatzIOMMUOff = 'h0000;
+localparam doub_bt SpatzIOMMUSize = 'h1000;
+// Safety IOMMU Config
+localparam bit     SafetyIOMMUEnable = 0;
+localparam doub_bt SafetyIOMMUOff = 'h1000;
+localparam doub_bt SafetyIOMMUSize = 'h1000;
+/************************
  * RegBus Configuration *
  ***********************/
 // Platform control registers
@@ -80,5 +93,9 @@ localparam doub_bt PadframeCfgSize = 'h00001000;
 localparam bit     L2EccCfgEnable = 1;
 localparam doub_bt L2EccCfgBase = 'h200B0000;
 localparam doub_bt L2EccCfgSize = 'h00001000;
+// IOMMUs Config
+localparam bit     IOMMUsEnable = SpatzIOMMUEnable | SafetyIOMMUEnable;
+localparam doub_bt IOMMUsBase = 'h20030000;
+localparam doub_bt IOMMUsSize = 'h00004000;
 
 endpackage

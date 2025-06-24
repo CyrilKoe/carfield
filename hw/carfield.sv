@@ -35,7 +35,7 @@ module carfield
   parameter type reg_req_t           = logic,
   parameter type reg_rsp_t           = logic,
   // Having a dedicated synchronous port, the mailbox is not taken into account
-  localparam int unsigned NumSlaveCDCs = Cfg.AxiExtNumSlv - 1
+  localparam int unsigned NumSlaveCDCs = Cfg.AxiExtNumSlv - CarfieldIslandsCfg.mbox.enable
 ) (
   // host clock
   input   logic                                       host_clk_i,
@@ -900,7 +900,12 @@ cheshire i_cheshire_wrap                 (
   .vga_vsync_o (                 ),
   .vga_red_o   (                 ),
   .vga_green_o (                 ),
-  .vga_blue_o  (                 )
+  .vga_blue_o  (                 ),
+  .aw_delay_i  ( car_regs_reg2hw.dram_aw_delay.q ),
+  .w_delay_i   ( car_regs_reg2hw.dram_w_delay.q  ),
+  .b_delay_i   ( car_regs_reg2hw.dram_b_delay.q  ),
+  .ar_delay_i  ( car_regs_reg2hw.dram_ar_delay.q ),
+  .r_delay_i   ( car_regs_reg2hw.dram_r_delay.q  )
 );
 
 assign hyper_isolate_req = car_regs_reg2hw.periph_isolate.q;
